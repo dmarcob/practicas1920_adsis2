@@ -1,0 +1,62 @@
+// T.1 Gestión de máquinas virtuales
+
+TEORÍA
+
+    1.Monitor de máquinas virtuales
+    2.Tipos de virtualización de sistema
+        2.1 Virtualización nativa completa
+                Hypervisor
+                    KVM
+        2.2 Virtualización de nivel de S.O
+                Contenedor
+                    Docker
+        2.3 Emulación completa
+                    Qemu
+                    Maquina virtual java
+     
+
+
+PRÁCTICA
+    1.libvirt
+        libvirtd
+            libvirt.conf
+            libvirtd.conf
+        virsh
+        virt-install
+        virt-manager
+        virt-viewer
+        virt-clone
+        virt-sysprep
+     2.Configuración VM's en libvirt
+        2.1fichero imagen de VM
+            vm1.qcow2
+            vm2.raw
+            vm3.vdi
+        2.2fichero configuración de VM
+            vm1.xml
+                <domain type = ' '> 
+                    <name> 
+                    <uuid>
+                    <currenMemory> 
+                    <vcpu>
+                    <os>
+                        <type>
+                        <boot dev=' '>
+                    <devices>
+                        <emulator> 
+                        <disk type =' '> 
+                            <driver name= ' '>
+                            <source file=' '>
+                            <target dev=' '>
+                            <address type=' '>
+                        <interface type=' '>
+                            <mac address=' '>
+                            <source>
+                            <model type>
+                            <adress type=' '>
+
+-----------------------------------------------------------
+TEORÍA
+
+PRÁCTICA
+         

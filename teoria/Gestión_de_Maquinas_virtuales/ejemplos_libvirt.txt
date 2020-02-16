@@ -1,0 +1,25 @@
+/*Creación VM openBSD 6.6
+
+1.El hypervisor emula un disco y para ello utiliza un .img o .qcow
+como fuente para ello.
+Creamos una imagen de disco vacía:
+    $ fallocate -l 8G name.img //8GB raw disk 
+    
+    $qemu-img create -f qcow2 ./name.qcow2 8G 
+
+2.Descargamos el .iso del mirror de openBSD
+    $wget  http://mirror.switch.ch/ftp/mirror/OpenBSD/6.0/amd64/cd60.iso
+    
+3.Creamos VM:
+
+virt-install \
+--connect qemu:///system -n o60 -r 256 \
+--vcpus=1 \
+--disk path=/home/diego/vms/obd60.img,size=0.6 \
+-c /home/diego/isos/install66.iso --vnc  \
+--noautoconsole --os-type unix \
+--accelerate \
+--network=bridge:br0,model=e1000 \
+--hvm
+    
+
