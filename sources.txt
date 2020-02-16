@@ -1,0 +1,5 @@
+libvirt
+http://rabexc.org/posts/how-to-get-started-with-libvirt-on
+
+ruby
+http://rubyforadmins.com/
