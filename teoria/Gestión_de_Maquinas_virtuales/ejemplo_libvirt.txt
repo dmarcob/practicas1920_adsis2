@@ -4,12 +4,18 @@
 como fuente para ello.
 Creamos una imagen de disco vacía:
     $ fallocate -l 8G name.img //8GB raw disk 
-    
+    ó
     $qemu-img create -f qcow2 ./name.qcow2 8G 
 
 2.Descargamos el .iso del mirror de openBSD
     $wget  http://mirror.switch.ch/ftp/mirror/OpenBSD/6.0/amd64/cd60.iso
-    
+  
+3.Listamos redes disponibles
+    virsh -c qemu:///system net-list --all
+
+4.Arrancamos red default
+    virsh -c qemu:///system net-start default
+
 3.Creamos VM:
 
 virt-install \
@@ -19,7 +25,7 @@ virt-install \
 -c /home/diego/isos/install66.iso --vnc  \
 --noautoconsole --os-type unix \
 --accelerate \
---network=bridge:br0,model=e1000 \
---hvm
+--network=default \
+--hvm   
     
 

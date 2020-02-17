@@ -1,0 +1,99 @@
+http://rabexc.org/posts/how-to-get-started-with-libvirt-on
+
+FIRST STEPS WITH LIBVIRT
+1) qemu://xxxx/system, para indicar todo el sistema de VMs corriendo en el servidor xxxx
+
+2) qemu://xxxx/session, para indicar todo el sistema de VMs corriendo en el servidor xxxx pertenecientes al usuario que ejecuta virsh
+
+3) qemu:///system, VMs corriendo en local
+
+4) qemu://session, VMs corriendo en local pertenecientes a usuario que ejecuta virsh
+
+
+MANAGING SYSTEM VMs
+libvirtd corre en un unix domain socket en /var/run/libvirtd.
+Para que un usuario pueda "escribir" en ese socket, necesita pertenecer al grupo libvirt.
+
+$sudo usermod -aG libvirt diego
+
+
+
+DEFINING A NETWORK 
+Cada mv necesita una network y un storage.
+Esto se define en un archivo .xml
+
+$ virsh -c qemu:///system net-list --all
+$ virsh -c qemu:///system net-dumpxml default
+$ virsh -c qemu:///system net-edit default
+
+
+STARTING AND STOPPING NETWORKS
+$ virsh -c qemu:///system net-start default
+$ virsh -c qemu:///system net-destroy default
+$ virsh -c qemu:///system net-autostart default
+
+libvirt comienza un servicio dnsmasq (dhcp + dns)
+Nueva interfaz en el host, virbr0 192.168.122.1
+Nuevas reglas en iptables
+    Permiten quering al dnsmaq
+    Permiten modo bridge
+    Permiten modo nat
+
+
+MANAGING STORAGE
+1) Crear un pool llamado devel en /opt/kvms/pools/devel
+$  virsh -c qemu:///system \
+    pool-define-as devel \
+    dir --target /opt/kvms/pools/devel 
+
+2)Listar pool
+$  virsh -c qemu:///system pool-list --all
+
+3)Arrancar pool
+$ virsh -c qemu:///system pool-start devel
+
+4)Listar volumenes de un pool
+$ virsh -c qemu:///system vol-list devel
+
+Otras opciones: vol-create, vol-delete, vol-resize,...
+
+
+INSTALAR MAQUINA VIRTUAL
+virt-install -n debian-testing \
+             --ram 2048 --vcpus=2 \
+             --cpu=host \
+             -c ./netinst/debian-6.0.7-amd64-netinst.iso \
+             --os-type=linux --os-variant=debiansqueeze \
+             --disk=pool=devel,size=2,format=qcow2 \
+             -w network=devel --graphics=vnc
+
+IMPORTAR MAQUINA VIRTUAL
+1) Copiar imagen en el directorio del pool:
+$ cp my-vm.qcow2 /opt/kvms/pools/devel
+
+2)Actualizamos el pool
+$ virsh -c qemu:///system pool-refresh default
+
+3)Creamos una nueva MV basada en la imagen, con virt-install
+y --import
+$ virt-install --connect qemu:///system --ram 1024 \
+    -n my-vm --os-type=linux --os-variant=debianwheezy \
+    --disk vol=default/my-vm.qcow2,device=disk,format=qcow2 \
+    --vcpus=1 --vnc --import
+    
+4)Modificar el xml de la red.
+
+
+MANAGING VIRTUAL AMCHINES
+virt-viewer my-vm 
+virsh start my-vm 
+virsh destroy my-vm 
+virsh shutdown my-vm 
+virt-clone --original my-vm --auto-clone 
+virsh autostart my-vm 
+
+BACKING IMAGES
+$ qemu-img rebase -u -b original_backing_file_in_new_path.img \
+    derived_image.qcow2
+
+

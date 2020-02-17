@@ -1,6 +1,8 @@
 // T.1 Gestión de máquinas virtuales
 
+********
 TEORÍA
+********
 
     1.Monitor de máquinas virtuales
     2.Tipos de virtualización de sistema
@@ -15,8 +17,9 @@ TEORÍA
                     Maquina virtual java
      
 
-
+********
 PRÁCTICA
+********
     1.libvirt
         libvirtd
             libvirt.conf
@@ -56,7 +59,28 @@ PRÁCTICA
                             <adress type=' '>
 
 -----------------------------------------------------------
+********
 TEORÍA
+********
 
+KVM
+    Kernel-Based Virtual Machine, consiste en unos cuantos módulos kernel de linux que se aprovechan de las instrucciones especiales de virtualización del CPU.
+    -Virtualiza componentes HW e instala S.O sobre ellos
+    -Las instrucciones se ejecutan al final sobre CPU real.
+    -Para virtualizar disco necesario archivo .qcow2...
+
+QEMU
+    Conjunto de programas que nos dan capacidad de emulación.
+    Es decir, ejecutar programas para una arquitectura (p.ej: ARM) en otra arquitectura (p.ej: x86_64). 
+    -Traduce las instrucciones de una arquitectura a otra.
+
+Libvirt
+    Software para administrar VM's de forma automatizada y escalable.
+    - libvirtd escucha instrucciones "Crea VM", "destruye VM".
+      "Crea network" y las ejecuta usando utilidades básicas de linux (qemu binaries, iptables, ssh).
+      Posee una API que es usada por virt-manager y los comandos virt (virsh)
+
+********
 PRÁCTICA
+********
          

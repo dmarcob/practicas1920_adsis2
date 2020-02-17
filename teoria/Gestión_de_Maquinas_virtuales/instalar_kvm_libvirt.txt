@@ -1,0 +1,15 @@
+https://linuxhint.com/libvirt_qemu_kvm_debian/
+
+1. Comprobamos que tenemos el componente VT-x activo
+    lscpu \ egrep -E 'VT-x'
+2.Instalamos KVM y qemu
+    sudo apt install qemu-kvm
+3.Comprobamos que tenemos nuevo módulos kernel instalados
+    lsmod | grep kvm
+4.Instalamos libvirt y componentes necesarios
+    sudo apt install libvirt clientes
+    sudo apt install libvirt-daemon-system
+    sudo apt install virtinst //virsh, virt-manager...
+5.Añadimos nuestro usuario a los grupos libvirt y libvirt-qemu
+    sudo usermod -aG libvirt diego
+    sudo usermod -aG libvirt-qemu diego

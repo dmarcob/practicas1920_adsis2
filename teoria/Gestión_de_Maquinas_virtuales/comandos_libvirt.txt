@@ -1,0 +1,379 @@
+--------------------------------------------------------------------------------
+
+FUENTE: https://computingforgeeks.com/virsh-commands-cheatsheet/
+
+
+VIRSH COMMANDS CHEATSHEET
+sudo virsh list --all                              //listar todos los domains
+sudo virsh list                                    //listar domains activos
+sudo virsh start my-mv                             //Arrancar mv llamada my-mv
+sudo virsh autostart my-mv                         //Arrancar automaticamente en system startup.
+sudo virsh shutdown my-mv                          //Apagar bien my-mv
+sudo virsh destroy my-mv                           //Apagar forzadamente my-mv
+*************************
+for i in `sudo virsh list | grep running | awk '{print $2}'` do
+    sudo virsh shutdown $i
+done 
+*************************                          //Apagar todos los domains activos
+sudo virsh reboot my-vm                            //Rearrancar my-vm
+
+*************************
+sudo virsh destroy my-mv 2> /dev/null
+sudo virsh undefine my-mv
+sudo virsh pool-refresh default
+sudo virsh vol-delete --pool default my-mv.qcow2
+*************************                           //Limpiar una mv de forma limpia 
+sudo virt-install \
+--name centos7 \
+--description "Test VM with CentOS 7" \
+--ram=1024 \
+--vcpus=2 \
+--os-type=Linux \
+--os-variant=rhel7 \
+--disk path=/var/lib/libvirt/images/centos7.qcow2,bus=virtio,size=10 \
+--graphics none \
+--location $HOME/iso/CentOS-7-x86_64-Everything-1611.iso \
+--network bridge:virbr0  \
+--console pty,target_type=serial -x 'console=ttyS0,115200n8
+**************************                           //Crear una mv 
+sudo virsh console my-mv                             //conectar a la consola del domain
+sudo EDITOR=vim virsh edit my-mv                     //editar el xml de my-mv
+sudo virsh save my-mv my-mv.saved                    //Guardar estado de my-mv
+sudo restore test.save                               //Recuperar estado guardado de my-mv
+
+
+
+VIRSH MANAGE VOLUMES
+sudo virsh vol-create-as default my-mv_vol2.qcow2 2G //Crear un columen de 2GB en el default storage pool
+*****************************
+virsh attach-disk --domain my-mv \
+--source /var/lib/libvirt/images/test_vol2.qcow2  \
+--persistent --target vdb
+*****************************
+sudo virsh detach-disk --domain my-mv --persistent --live --target vdb
+*****************************
+sudo virsh vol-delete my-mv_vol2.qcow2  --pool default
+
+
+
+VIRSH MANAGE SNAPSHOTS
+*****************************
+sudo virsh snapshot-create-as --domain my-mv \
+--name "my-mv_snapshot1" \
+--description "test vm snapshot 1-working"
+*****************************                       //Crear un snapshot
+virsh snapshot-list my-mv                           //listar snapshots
+****************************
+sudo virsh snapshot-info --domain my-mv 
+--snapshotname my-mv_snapshot1
+****************************                        //Listar info del snapshot
+sudo  virsh snapshot-delete 
+--domain test --snapshotname  my-mv_snapshot2
+****************************                        //Eliminar snapshot
+
+
+
+VIRSH CLONE A VM
+sudo virsh destroy my-mv                            //Primero apagamos mv
+****************************
+sudo virt-clone --connect qemu:///system \
+--original my-mv \
+--name my-mv2 \
+--file /var/lib/libvirt/images/my_mv2.qcow2 
+****************************                        //clonar mv
+
+
+
+--------------------------------------------------------------------------------
+
+FUENTE: virsh help
+
+
+Comandos agrupados: 
+
+
+
+ Domain Management (palabra  clave de ayuda 'domain'):
+    attach-device                  asocia un dispositivo desde un archivo XML
+    attach-disk                    asociar dispositivo de disco
+    attach-interface               asociar interfaz de red
+    autostart                      inicia automáticamente un dominio
+    blkdeviotune                   Establecer o solicitar un dispositivo de bloque de parámetros de ajuste de E/S.
+    blkiotune                      Obtener o establecer parámetro blkio
+    blockcommit                    Iniciar una operación de envío de bloque
+    blockcopy                      Iniciar una operación de copia de  bloque.
+    blockjob                       Administrar operaciones de bloque activas
+    blockpull                      Puebla un disco desde su imagen de fondo.
+    blockresize                    Cambiar de tamaño de dispositivo de bloque de dominio.
+    change-media                   Cambiar medio de CD o controlador de disco blando
+    console                        conectarse con la consola huésped 
+    cpu-stats                      Mostrar estadísticas CPU de dominio
+    create                         crea un dominio desde un archivo XML
+    define                         define (pero no inicia) un dominio desde un archivo XML
+    desc                           Mostrar o establecer la descripción o título del  dominio
+    destroy                        Destruye (detiene) dominio
+    detach-device                  Desmontar un dispositivo de un archivo XML
+    detach-device-alias            detach device from an alias
+    detach-disk                    dispositivo de desconexión de disco
+    detach-interface               desmontar interfaz de red
+    domdisplay                     dominio muestra conexión URI
+    domfsfreeze                    Freeze domain's mounted filesystems.
+    domfsthaw                      Thaw domain's mounted filesystems.
+    domfsinfo                      Get information of domain's mounted filesystems.
+    domfstrim                      Invocar fstrim en sistemas de archivos montados de dominio.
+    domhostname                    Imprime el nombre de host de dominio
+    domid                          convertir un nombre de dominio o UUID en un ID de dominio
+    domif-setlink                  Establecer estado de enlace de una Interfaz virtual
+    domiftune                      Obtener o establecer los parámetros de una interfaz virtual
+    domjobabort                    interrumpir trabajo de dominio activo
+    domjobinfo                     información de trabajo de dominio
+    domname                        convertir un ID de dominio o UUID a nombre de dominio
+    domrename                      rename a domain
+    dompmsuspend                   Suspender un dominio con decoro mediante funciones de administración de energía
+    dompmwakeup                    Despertar un dominio desde el estado pmsuspended
+    domuuid                        convertir un nombre de dominio o ID en UUID de dominio
+    domxml-from-native             Convierte configuración nativa a dominio XML
+    domxml-to-native               Convierte dominio XML en configuración nativa
+    dump                           descarga el núcleo de un dominio a un archivo para su análisis
+    dumpxml                        información del dominio en XML
+    edit                           Editar configuración XML para un dominio
+    event                          Domain Events
+    inject-nmi                     Inyectar NMI al huésped
+    iothreadinfo                   view domain IOThreads
+    iothreadpin                    control domain IOThread affinity
+    iothreadadd                    add an IOThread to the guest domain
+    iothreadset                    modifies an existing IOThread of the guest domain
+    iothreaddel                    delete an IOThread from the guest domain
+    send-key                       Enviar código de teclas al huésped
+    send-process-signal            Enviar señales de procesos
+    lxc-enter-namespace            LXC Guest Enter Namespace
+    managedsave                    Almacenamiento administrado de un estado de dominio
+    managedsave-remove             Elimina el almacenamiento administrado de un dominio
+    managedsave-edit               edit XML for a domain's managed save state file
+    managedsave-dumpxml            Domain information of managed save state file in XML
+    managedsave-define             redefine the XML for a domain's managed save state file
+    memtune                        Obtiene o establece parámetros de memoria
+    perf                           Get or set perf event
+    metadata                       show or set domain's custom XML metadata
+    migrate                        migrar el dominio hacia otro host
+    migrate-setmaxdowntime         define el máximo tolerable de tiempo de inactividad
+    migrate-getmaxdowntime         get maximum tolerable downtime
+    migrate-compcache              Tamaño de cache de compresión get/set
+    migrate-setspeed               Establecer el ancho de banda máximo de  migración  
+    migrate-getspeed               Obtener la máxima migración de ancho de banda
+    migrate-postcopy               Switch running migration from pre-copy to post-copy
+    numatune                       Obtener un grupo de parámetros NUMA
+    qemu-attach                    Anexo QEMU
+    qemu-monitor-command           Comando de monitor QEMU 
+    qemu-monitor-event             QEMU Monitor Events
+    qemu-agent-command             Comando de agente de huésped QEMU 
+    reboot                         reinicia un dominio
+    reset                          Restablecer un dominio
+    restore                        restablece un dominio desde un estado anterior almacenado en un archivo
+    resume                         reinicia un dominio
+    save                           guarda el estado del dominio a un archivo
+    save-image-define              Redefinir el XML para un archivo de estado almacenado de dominio 
+    save-image-dumpxml             Información de dominio de estado guardado en XML 
+    save-image-edit                Editar XML para un archivo de estado almacenado de dominio 
+    schedinfo                      muestra/define parámetros de planificación
+    screenshot                     Tome una instantánea de la consola de dominio  actual y almacénela en un archivo
+    set-lifecycle-action           change lifecycle actions
+    set-user-password              set the user password inside the domain
+    setmaxmem                      modifica el límite de memoria máxima
+    setmem                         modifica el alojamiento de la memoria
+    setvcpus                       modifica la cantidad de Cpus virtuales
+    shutdown                       apagar un dominio de manera adecuada
+    start                          inicia un dominio inactivo (previamente definido)
+    suspend                        suspende un dominio
+    ttyconsole                     consola tty
+    undefine                       Quitar definición de un dominio
+    update-device                  Actualizar un dispositivo desde un archivo XML
+    vcpucount                      Conteo  de dominio de VCPU
+    vcpuinfo                       Información detallada de dominio de VCPU
+    vcpupin                        Control o solicitud de afinidad VCPU de dominio 
+    emulatorpin                    Control o solicitud de afinidad de emulador de dominio 
+    vncdisplay                     monitor VNC
+    guestvcpus                     query or modify state of vcpu in the guest (via agent)
+    setvcpu                        attach/detach vcpu or groups of threads
+    domblkthreshold                set the threshold for block-threshold event for a given block device or it's backing chain element
+
+ Domain Monitoring (palabra  clave de ayuda 'monitor'):
+    domblkerror                    Mostrar los errores  en los dispositivos de bloque
+    domblkinfo                     información del tamaño de los dispositivos de bloque del dominio
+    domblklist                     Liste todos los bloques de dominio
+    domblkstat                     obtiene el estado de un dispositivo de bloque de un dominio
+    domcontrol                     Estado de interfaz de control de dominio
+    domif-getlink                  Obtenga estado de enlace de interfaz virtual 
+    domifaddr                      Get network interfaces' addresses for a running domain
+    domiflist                      Listar todas las interfaces virtuales de dominio
+    domifstat                      obtiene estadísticas de interfaz de red de un dominio
+    dominfo                        información de dominio
+    dommemstat                     obtiene las estadísticas de la memoria de un dominio
+    domstate                       estado del dominio
+    domstats                       get statistics about one or multiple domains
+    domtime                        domain time
+    list                           muestra los dominios
+
+ Host and Hypervisor (palabra  clave de ayuda 'host'):
+    allocpages                     Manipulate pages pool size
+    capabilities                   capacidades
+    cpu-baseline                   Computar la línea base de la CPU
+    cpu-compare                    Compara la CPU del equipo con una CPU descrita en un archivo XML
+    cpu-models                     CPU models
+    domcapabilities                domain capabilities
+    freecell                       Memoria NUMA libre
+    freepages                      NUMA free pages
+    hostname                       muestra el nombre del host del hypervisor
+    hypervisor-cpu-baseline        compute baseline CPU usable by a specific hypervisor
+    hypervisor-cpu-compare         compare a CPU with the CPU created by a hypervisor on the host
+    maxvcpus                       Conexión máxima VCPU
+    node-memory-tune               Obtener o establecer parámetros de memoria de nodo
+    nodecpumap                     node cpu map
+    nodecpustats                   Imprime la estadística de la CPU del nodo.
+    nodeinfo                       información de nodo
+    nodememstats                   Imprime estadística de memoria del nodo
+    nodesuspend                    Suspender el nodo de host por un tiempo determinado
+    sysinfo                        Imprimir sysinfo del hipervisor
+    uri                            imprimir el URI canónico del hypervisor
+    version                        muestra la versión
+
+ Checkpoint (palabra  clave de ayuda 'checkpoint'):
+    checkpoint-create              Create a checkpoint from XML
+    checkpoint-create-as           Create a checkpoint from a set of args
+    checkpoint-delete              Delete a domain checkpoint
+    checkpoint-dumpxml             Dump XML for a domain checkpoint
+    checkpoint-edit                edit XML for a checkpoint
+    checkpoint-info                checkpoint information
+    checkpoint-list                List checkpoints for a domain
+    checkpoint-parent              Get the name of the parent of a checkpoint
+
+ Interface (palabra  clave de ayuda 'interface'):
+    iface-begin                    Cree una instantánea de los parámetros actuales, los cuales se pueden enviar más tarde (iface-commit) o restaurar (iface-rollback)
+    iface-bridge                   Crear un dispositivo de puente y adjuntarle el dispositivo de red
+    iface-commit                   Envíe cambios hechos desde iface-begin y libere el punto de restauración
+    iface-define                   define an inactive persistent physical host interface or modify an existing persistent one from an XML file
+    iface-destroy                  destruye una interfaz de host físico (se desactiva / "if-down")
+    iface-dumpxml                  información de interfaz en XML
+    iface-edit                     editar la configuración XML de una interfaz de host físico
+    iface-list                     muestra las interfaces de host físico
+    iface-mac                      convierte un nombre de interfaz a dirección de interfaz MAC
+    iface-name                     convierte una dirección de interfaz MAC a nombre de interfaz
+    iface-rollback                 Se revierte a la configuración anterior guardad vía iface-begin
+    iface-start                    inicia una interfaz de host físico (se activa / "if-up")
+    iface-unbridge                 Quitar definición de un dispositivo de puente después de desconectar su dispositivo esclavo
+    iface-undefine                 Quitar la definición de una interfaz de host físico (la elimina de la configuración)
+
+ Network Filter (palabra  clave de ayuda 'filter'):
+    nwfilter-define                define o actualiza un filtro de red desde un archivo XML
+    nwfilter-dumpxml               información del filtro de red en XML
+    nwfilter-edit                  Editar la configuración XML de un filtro de red
+    nwfilter-list                  muestra los filtros de red
+    nwfilter-undefine              Quitar la definición de un filtro de red
+    nwfilter-binding-create        create a network filter binding from an XML file
+    nwfilter-binding-delete        delete a network filter binding
+    nwfilter-binding-dumpxml       información del filtro de red en XML
+    nwfilter-binding-list          list network filter bindings
+
+ Networking (palabra  clave de ayuda 'network'):
+    net-autostart                  iniciar una red automáticamente 
+    net-create                     Crear una red desde un archivo XML
+    net-define                     define an inactive persistent virtual network or modify an existing persistent one from an XML file
+    net-destroy                    Destruye (detiene) una red
+    net-dhcp-leases                print lease info for a given network
+    net-dumpxml                    Información de red en XML
+    net-edit                       Editar la configuración XML de una red
+    net-event                      Network Events
+    net-info                       Información de red
+    net-list                       muestra las redes
+    net-name                       convierte un UUID de red en nombre de red
+    net-start                      inicia una red no activa (previamente definida)
+    net-undefine                   undefine a persistent network
+    net-update                     Actualizar partes de una configuración de red existente
+    net-uuid                       convierte un nombre de red en UUID de red
+    net-port-list                  list network ports
+    net-port-create                create a network port from an XML file
+    net-port-dumpxml               network port information in XML
+    net-port-delete                network port information in XML
+
+ Node Device (palabra  clave de ayuda 'nodedev'):
+    nodedev-create                 crea un dispositivo definido por un archivo XML en el nodo
+    nodedev-destroy                Destruye (detiene) un dispositivo en el nodo
+    nodedev-detach                 Desconectar el dispositivo de nodos de su controlador de dispositivos
+    nodedev-dumpxml                detalles del dispositivo de nodo en XML
+    nodedev-list                   enumera los dispositivos en este host
+    nodedev-reattach               asociar nuevamente el dispositivo de nodo con su controlador
+    nodedev-reset                  reiniciar dispositivo de nodo
+    nodedev-event                  Node Device Events
+
+ Secret (palabra  clave de ayuda 'secret'):
+    secret-define                  define o modifica un secreto desde un archivo XML
+    secret-dumpxml                 atributos de  secretos en XML
+    secret-event                   Secret Events
+    secret-get-value               Mostrar un valor secreto
+    secret-list                    muestra los secretos
+    secret-set-value               definir un valor secreto
+    secret-undefine                Quitar la definición de un secreto
+
+ Snapshot (palabra  clave de ayuda 'snapshot'):
+    snapshot-create                Crear una instantánea desde XML
+    snapshot-create-as             Crea una instantánea desde un set de argumentos
+    snapshot-current               Obtiene o establece la actual  instantánea
+    snapshot-delete                Elimina una captura instantánea de dominio
+    snapshot-dumpxml               Descargar XML para una captura instantánea de dominio
+    snapshot-edit                  Editar XML para una instantánea
+    snapshot-info                  Información de instantánea
+    snapshot-list                  Muestra las capturas instantáneas de un dominio
+    snapshot-parent                Obtenga el nombre del padre de una instantánea
+    snapshot-revert                Revierte el dominio a una captura instantánea
+
+ Storage Pool (palabra  clave de ayuda 'pool'):
+    find-storage-pool-sources-as   encontrar fuentes posibles de grupo de almacenamiento
+    find-storage-pool-sources      descubre posibles fuentes de grupo de almacenamiento
+    pool-autostart                 inicia automáticamente un grupo
+    pool-build                     compila un grupo
+    pool-create-as                 crea un grupo desde un conjunto de argumentos
+    pool-create                    crea un grupo desde un archivo XML
+    pool-define-as                 define un grupo desde un conjunto de argumentos
+    pool-define                    define an inactive persistent storage pool or modify an existing persistent one from an XML file
+    pool-delete                    elimina un grupo
+    pool-destroy                   Destruye (detiene) un grupo
+    pool-dumpxml                   información del grupo en XML
+    pool-edit                      Editar la configuración XML de un grupo de almacenamiento
+    pool-info                      información de grupo de almacenamiento
+    pool-list                      muestra los grupos
+    pool-name                      convierte un UUID de grupo a nombre de grupo
+    pool-refresh                   actualiza un grupo
+    pool-start                     inicia un grupo no activo (previamente definido)
+    pool-undefine                  Quitar la definición de un grupo inactivo
+    pool-uuid                      convierte un nombre de grupo en UUID de grupo
+    pool-event                     Storage Pool Events
+    pool-capabilities              storage pool capabilities
+
+ Storage Volume (palabra  clave de ayuda 'volume'):
+    vol-clone                      clonar un volumen.
+    vol-create-as                  crea un volumen desde un conjunto de argumentos
+    vol-create                     crea un volumen desde un archivo XML
+    vol-create-from                crea un volumen utilizando otro volumen como entrada
+    vol-delete                     elimina un volumen
+    vol-download                   Descargar contenido de volumen a un archivo
+    vol-dumpxml                    información del volumen en XML
+    vol-info                       información del volumen de almacenamiento
+    vol-key                        devuelve la llave de volumen de un determinado nombre o ruta de volumen
+    vol-list                       muestra los volúmenes
+    vol-name                       devuelve el nombre del volumen de una determinada llave o ruta de volumen
+    vol-path                       devuelve la ruta del volumen de un determinado nombre o llave de volumen
+    vol-pool                       devuelve el grupo de almacenamiento de una determinada llave o ruta de volumen
+    vol-resize                     resize a vol
+    vol-upload                     descargar contenido de archivo a un volumen
+    vol-wipe                       elimina un volumen
+
+ Virsh itself (palabra  clave de ayuda 'virsh'):
+    cd                             modificar el directorio actual
+    echo                           Argumentos de eco
+    exit                           Abandonar esta terminal interactiva
+    help                           asistencia de impresión
+    pwd                            Imprimir el directorio actual
+    quit                           Abandonar esta terminal interactiva
+    connect                        (re)conectarse con el hipervisor
+
+
