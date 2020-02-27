@@ -10,10 +10,12 @@
 		permit nopass keepenv :wheel
    E: https://flak.tedunangst.com/post/doas-mastery
 
+C------------------------------------------------------------
+
 3. P:Crear imagen diferencial de o.qcow2
    S: qemu-img create -f qcow2 -o backing_file=o.qcow2 orouter1.qcow2
 
-5. P: Modificar mac adress y uuid
+5. P: Modificar nombre, direccion qcow2, mac adress y uuid
    S: vi fichero.xml
 		cambiar mac address y uuid en el xml
 
@@ -26,9 +28,48 @@
 				-autoconfprivacy
       vi /etc/hostname.vlan199
 	  Añado:
-				inet6 alias 2001:470:736b:1ff::1 64 NONE vlan 199 vlandev vio0
+				inet6 alias 2001:470:736b:1ff::1 64 vlan 199 vlandev vio0
 				-autoconfprivacy
-
+      
+	  vi /etc/mygate
+				2001:470:736b:f000::1
 8. P: Activar encaminamiento ipv6
    S: echo 'net.inet6.ip6.forwarding=1' > sysctl.conf
-   E: Ejemplos en /etc/examples
+   E: Ejemplos en /etc/examples
+   C: cat /etc/sysctl.confi
+
+9. P: Servicio de anuncio de prefijos IPv6 subred vlan
+   S: /etc/rc.conf.local
+				rad_flags=""
+      /etc/rad.conf
+				interface vlan199
+
+10. P:nombre maquina
+    S: /etc/myname
+				orouter1
+
+D-----------------------------------------------------------
+14 y 15. Repetir 3 y 5
+16. /etc/hostname.vio0
+		-inet6
+		up:wq
+		-autoconfprivacy
+		
+    /etc/mygate
+		eliminar: 155.210.161.254
+		2001:470:736b::111
+
+17. /etc/hostname.vlan99
+		vlan 199 vlandev vio0 up
+		inet6 autoconf
+		-autoconfprivacy
+
+19 /etc/myname
+		o1ff2
+
+20 sh /etc/netstart
+
+
+
+
+
