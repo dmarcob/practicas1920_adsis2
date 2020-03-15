@@ -1,0 +1,75 @@
+o1ff2$ ifconfig
+lo0: flags=8049<UP,LOOPBACK,RUNNING,MULTICAST> mtu 32768
+        index 3 priority 0 llprio 3
+        groups: lo
+        inet6 ::1 prefixlen 128
+        inet6 fe80::1%lo0 prefixlen 64 scopeid 0x3
+        inet 127.0.0.1 netmask 0xff000000
+vio0: flags=48843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST,INET6_NOPRIVACY> mtu 1500
+        lladdr 52:54:00:01:ff:02
+        index 1 priority 0 llprio 3
+        media: Ethernet autoselect
+        status: active
+enc0: flags=0<>
+        index 2 priority 0 llprio 3
+        groups: enc
+        status: active
+vlan199: flags=248843<UP,BROADCAST,RUNNING,SIMPLEX,MULTICAST,INET6_NOPRIVACY,AUTOCONF6> mtu 1500
+        lladdr 52:54:00:01:ff:02
+        index 4 priority 0 llprio 3
+        encap: vnetid 199 parent vio0
+        groups: vlan egress
+        media: Ethernet autoselect
+        status: active
+        inet6 fe80::3ba6:89d5:7f9c:8a3e%vlan199 prefixlen 64 scopeid 0x4
+        inet6 2001:470:736b:1ff:835f:40d2:1a05:f366 prefixlen 64 autoconf pltime 604681 vltime 2591881
+
+
+o1ff2$ route show
+Routing tables
+
+Internet:
+Destination        Gateway            Flags   Refs      Use   Mtu  Prio Iface
+224/4              localhost          URS        0        0 32768     8 lo0  
+127/8              localhost          UGRS       0        0 32768     8 lo0  
+localhost          localhost          UHhl       1        2 32768     1 lo0  
+
+Internet6:
+Destination        Gateway            Flags   Refs      Use   Mtu  Prio Iface
+default            fe80::89ab:6ef1:bd UGS        1       15     -    56 vlan199
+::/96              localhost          UGRS       0        0 32768     8 lo0  
+localhost          localhost          UHhl      10       20 32768     1 lo0  
+::ffff:0.0.0.0/96  localhost          UGRS       0        0 32768     8 lo0  
+2001:470:736b:1ff: 2001:470:736b:1ff: UCn        1        2     -     4 vlan199
+2001:470:736b:1ff: 52:54:00:01:ff:01  UHLc       0       33     -     3 vlan199
+2001:470:736b:1ff: 52:54:00:01:ff:02  UHLl       0      213     -     1 vlan199
+2002::/24          localhost          UGRS       0        0 32768     8 lo0  
+2002:7f00::/24     localhost          UGRS       0        0 32768     8 lo0  
+2002:e000::/20     localhost          UGRS       0        0 32768     8 lo0  
+2002:ff00::/24     localhost          UGRS       0        0 32768     8 lo0  
+fe80::/10          localhost          UGRS       0        1 32768     8 lo0  
+fec0::/10          localhost          UGRS       0        0 32768     8 lo0  
+fe80::1%lo0        fe80::1%lo0        UHl        0        0 32768     1 lo0  
+fe80::%vlan199/64  fe80::3ba6:89d5:7f UCn        1        1     -     4 vlan199
+fe80::3ba6:89d5:7f 52:54:00:01:ff:02  UHLl       0        9     -     1 vlan199
+fe80::89ab:6ef1:bd 52:54:00:01:ff:01  UHLch      1       49     -     3 vlan199
+ff01::/16          localhost          UGRS       1        2 32768     8 lo0  
+ff01::%lo0/32      fe80::1%lo0        Um         0        1 32768     4 lo0  
+ff01::%vlan199/32  fe80::3ba6:89d5:7f Um         0        1     -     4 vlan199
+ff02::/16          localhost          UGRS       1        2 32768     8 lo0  
+ff02::%lo0/32      fe80::1%lo0        Um         0        1 32768     4 lo0  
+ff02::%vlan199/32  fe80::3ba6:89d5:7f Um         0        1     -     4 vlan199
+
+
+
+o1ff2$ cat /etc/hostname.vio0
+-inet6
+up
+-autoconfprivacy
+
+o1ff2$ cat /etc/hostname.vlan199
+vlan 199 vlandev vio0 up 
+inet6 autoconf
+-autoconfprivacy
+
+

@@ -1,0 +1,52 @@
+NTP	(Network Time Protocol)
+	Protocolo para sincronizar los relojes de los ordenadores.
+	Usa UDP
+	Usa puerto 123
+	Implementación chrony: chronyd, chronyc
+
+FTP	(File Transfer Protocol)
+	Protocolo para la transferencia de archivos.
+	Usa TCP
+	Usa puerto 20 y 21
+	Pensado para máxima velocidad. Intercambio en texto plano. Mejor SFTP(con cifrado).
+
+NFS	(Network File System)
+	Acceso remoto a un sistema de archivos a través de la red. 
+	Para windows usar Samba.
+	O login con kerveros o equipos autorizados por IP.
+
+LDAP 	(Light Directory Access Protocol)
+	Implementación Active Directory de Windows
+
+SMTP	(Simple Mail Transfer Protocol)
+	Intercambio de mensajes de correo entre ordenadores.
+	Se centra en enviar correo. Recibirlo lo hace el protocolo POP
+
+POP3	(Post Office Protocol)
+	En clientes locales de correos para obtener mensajes de correo.
+
+--------------------------------------------------------------------------
+
+Registro SOA
+	https://www.ionos.es/digitalguide/hosting/cuestiones-tecnicas/registro-soa/
+
+configuración nsd.conf, forward zone, reverse zone, compile and reload
+	https://calomel.org/nsd_dns.html
+
+tutorial nsd.conf CLAVE
+https://www.digitalocean.com/community/tutorials/how-to-use-nsd-an-authoritative-only-dns-server-on-ubuntu-14-04
+
+explicación nsd.conf 
+https://github.com/NLnetLabs/nsd/blob/master/doc/README
+
+tutorial unbound
+https://calomel.org/unbound_dns.html
+
+///////////////
+COMANDOS ÚTILES
+///////////////
+
+dig -x 155.210.161.253 @8.8.8.8 +trace //resolución inversa de 155.xx desde nameserver 8.8.8.8, traza
+dig wiuz.unizar.es +short //Dime solo la IP
+nsdc rebuild //recompilar database for nsd
+nscd reload //al hacer cambios a nsd.conf

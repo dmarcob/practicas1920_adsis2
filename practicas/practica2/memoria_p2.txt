@@ -1,0 +1,283 @@
+Configuración en red máquina o1ff3 y o1ff4 (varía 3 o 4 segun maquina)
+---------------------------------------------------------------------	
+-Copia diferencial
+-cambio nombre, uuid, mac y drectorio fuente en el o1ff3.xml
+-Configuro hostname.vio0
+	-inet6
+	up
+	-autoconfprivacy
+-configuro hostname.vlan199
+	inet6 alias 2001:470:736b:1ff::3 64 vlan 199 vlandev vio0
+	-autoconfprivacy
+-configuro /etc/mygate
+	2001:470:736b:1ff::1
+-configuro /etc/myname
+	ns1 (o1ff3) o ns2 (o1ff4)
+
+Configuración en red máquina o1ff2
+----------------------------------
+-Cambio de ip autoconfigurada con rad, por ip estática en hostname.vio0
+	inet6 alias 2001:470:736b:1ff::2 64 vlan 199 vlandev vio0
+	-autoconfprivacy
+
+Configuración inicial
+----------------------------------
+Lanzo el script setup.sh sobre todas las máquinas para establecer
+los alias... en .profile
+
+configuro como clientes DNS, todas las máquinas
+-----------------------------------------------
+Añado en resolv.conf la ip del servidor de nombres recursivo -> 2001:470:736b:1ff::2
+
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+////////    configuro servidor primario ns1 (o1ff3)	      ///////
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+	usermod -G _nsd a755232 //añado a755232 a _nsd
+	
+	/etc/rc.conf.local
+		nsd_flags="" //nsd activado en el inicio
+
+	doas nsd-control-setup en /var/nsd/etc //para crear ficheros necesarios (seguridad)
+	
+	nsd.conf
+	---------
+   server:
+         hide-version: yes  #El servidor no responde a peticiones de version
+        verbosity: 1       #Nivel de verbosidad en los logs (0 default,1,2,3)
+        ip-address: 2001:470:736b:1ff::3 #Asociar @IP a NSD
+                database: "/var/nsd/db/nsd.db"
+                username: _nsd #NSD se queda con los privilegios del grupo _nsd
+                logfile: "/var/log/nsd.log"
+                pidfile: "/var/nsd/run/nsd.pid"
+        port: 53
+        server-count: 1 #CPUs a utilizar
+        ip6-only: yes
+        tcp-count: 60 #Maximo numero de conexiones TCP concurrentes
+        zonesdir: "/var/nsd/zones"
+
+   #permitir control local del demonio con el comando nsd-control
+   remote-control:
+        control-enable: yes
+        control-interface: ::1
+        control-port: 8952
+        server-key-file: "/var/nsd/etc/nsd_server.key"
+        server-cert-file: "/var/nsd/etc/nsd_server.pem"
+        control-key-file: "/var/nsd/etc/nsd_control.key"
+        control-cert-file: "/var/nsd/etc/nsd_control.pem"
+   #Clave secreta que NSD usa para ejecutar transferencias entre
+   #primario y secundario de formasegura. TSIG(Transaction SIGnature)
+   #key:
+        name: "mskey"
+        algorithm: hmac-sha256
+        secret: "bWVrbWl0YXNkaWdvYXQ="
+
+   #pattern:
+        name: "tosecondary"
+        notify: 2001:470:736b:1ff::4 mskey #notifica al secundario de actualizaciones
+        provide-xfr: 2001:470:736b:1ff::4 mskey #provee informacion de la zona al secundario
+
+   #zona directa "1.ff.es.eu.org"
+   #zone:
+        name: "1.ff.es.eu.org"
+        zonefile: "1.ff.es.eu.org.directo"
+        include-pattern: "tosecondary"
+
+
+   #zona inversa "1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa"
+   #zone:
+        name: "1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa"
+        zonefile: "1.ff.es.eu.org.inverso"
+        include-pattern: "tosecondary"
+
+
+Creo el fichero de zona directa en la ruta indicada por zonesdir y de nombre indicado
+por zonefile
+touch /var/nsd/zones/1.ff.es.eu.org.directo
+	
+Lo mismo con la zona inversa
+touch /var/nsd/zones/1.ff.es.eu.org.inverso
+
+	
+	1.ff.es.eu.org.directo
+	----------------------
+	registro SOA:
+	Para el nº serie se escoge el formato fecha AAAAMMDDVV. De esta forma dejo constancia de la fecha en la que se ha creado la version. Con cada cambio en un mismo día aumenta el nº de version en una cifra y al día siguiente se restablece el nº de serie y el nº de version se vuelve a poner a 1
+	registro NS:
+	Indica que servidores son autoritarios para ese dominio
+
+$ORIGIN 1.ff.es.eu.org.
+@       IN      SOA     ns1.1.ff.es.eu.org.  a755232.1.ff.es.eu.org. (
+                        2020031101           ; numero serie
+                        21600                ; Refresca cada 6 horas 
+                        3600                 ; Reintenta cada 1 hora 
+                        604800               ; Expira despues de 1 semana
+                        86400 )              ; TTL minimo cliente de 1 dia      
+        IN      NS      ns1.1.ff.es.eu.org.
+        IN      NS      ns2.1.ff.es.eu.org.
+ns1     IN      AAAA    2001:470:736b:1ff::3
+ns2     IN      AAAA    2001:470:736b:1ff::4
+router1 IN      AAAA    2001:470:736b:f000::111
+o1ff3   IN      CNAME   ns1
+o1ff4   IN      CNAME   ns2 
+
+	1.ff.es.eu.org.inverso
+	----------------------
+$ORIGIN 1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa.
+@       IN      SOA     ns1.1.ff.es.eu.org.  a755232.1.ff.es.eu.org. (
+                        2020031101           ; numero serie
+                        21600                ; Refresca cada 6 horas
+                        3600                 ; Reintenta cada 1 hora
+                        604800               ; Expira despues de 1 semana
+                        86400 )              ; TTL minimo cliente de 1 dia
+        IN      NS      ns1.1.ff.es.eu.org.
+        IN      NS      ns2.1.ff.es.eu.org.
+3.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f     IN      PTR     ns1.1.ff.es.eu.org.
+4.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f     IN      PTR     ns2.1.ff.es.eu.org.
+1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f     IN      PTR     router1.1.ff.es.eu.org.
+
+
+
+
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+////////    configuro servidor secundario ns2 (o1ff4)	      ///////
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+usermod -G _nsd a755232 //añado a755232 a _nsd
+	
+/etc/rc.conf.local
+	nsd_flags="" //nsd activado en el inicio
+doas nsd-control-setup en /var/nsd/etc //para crear ficheros necesarios (seguridad)
+	
+	nsd.conf
+	---------
+#openBSD: nsd.conf,v 1.13 2018/08/16 17:59:12 florian Exp $
+
+server:
+        hide-version: yes  #El servidor no responde a peticiones de version
+        verbosity: 1       #Nivel de verbosidad en los logs (0 default,1,2,3) 
+        ip-address: 2001:470:736b:1ff::4 #Asociar @IP a NSD
+                database: "/var/nsd/db/nsd.db"   
+                username: _nsd #NSD se queda con los privilegios del grupo _nsd
+                logfile: "/var/log/nsd.log"
+                pidfile: "/var/nsd/run/nsd.pid" 
+        port: 53
+        server-count: 1 #CPUs a utilizar
+        ip6-only: yes   
+        tcp-count: 60 #Maximo numero de conexiones TCP concurrentes
+        zonesdir: "/var/nsd/zones"
+
+#permitir control local del demonio con el comando nsd-control
+remote-control:
+        control-enable: yes
+        control-interface: ::1
+        control-port: 8952
+        server-key-file: "/var/nsd/etc/nsd_server.key"
+        server-cert-file: "/var/nsd/etc/nsd_server.pem"
+        control-key-file: "/var/nsd/etc/nsd_control.key"
+        control-cert-file: "/var/nsd/etc/nsd_control.pem"  
+
+#Clave secreta que NSD usa para ejecutar transferencias entre
+#primario y secundario de formasegura. TSIG(Transaction SIGnature)
+key:
+        name: "mskey"
+        algorithm: hmac-sha256
+        secret: "bWVrbWl0YXNkaWdvYXQ="
+
+pattern:
+        name: "toprimary"
+        allow-notify: 2001:470:736b:1ff::3 mskey #Permite ser notificado por primario 
+        request-xfr: AXFR 2001:470:736b:1ff::3 mskey #Pide actualizaciones al primario 
+
+#zona directa "1.ff.es.eu.org" 
+zone:
+        name: "1.ff.es.eu.org" 
+        zonefile: "1.ff.es.eu.org.directo"
+        include-pattern: "toprimary"
+
+
+#zona inversa "1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa" 
+zone:
+        name: "1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa" 
+        zonefile: "1.ff.es.eu.org.inverso"
+        include-pattern: "toprimary"
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+////////    	/var/unbound/etc/unbound.conf (o1ff2) 		/////
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+# $OpenBSD: unbound.conf,v 1.8 2018/03/29 20:40:22 florian Exp $
+
+server:
+        interface: 0.0.0.0
+        interface: ::0
+        verbosity: 1
+        hide-identity: yes
+        hide-version: yes
+        access-control: 2001:470:736b::/48 allow
+        access-control: ::1 allow
+
+remote-control:
+        control-enable: yes
+        control-use-cert: no
+
+# Use an upstream forwarder (recursive resolver) for specific zones.
+# Example addresses given below are public resolvers valid as of 2014/03.
+#
+forward-zone:
+        name: "."                               # use for ALL queries
+        forward-addr: 2001:470:20::2            # he.net v6
+        forward-addr: 2001:4860:4860::8888      # google.com v6
+        forward-first: yes                      # try direct if forwarder fails
+
+
+
+
+Tras configurar unbound, añado la maquina otro_servidor en la zona directa e inversa de ns1.
+Modifico manualmente el numero de serie de las zonas a 2020031102. Esto manda un notify automático al servidor secundario ns2 que actualiza las zonas en un tiempo denotado en provide-xfr de ns1.
+Para forzar a que transfiera automaticamente la zona, desde ns2 hago nsd-control transfer.
+
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+////////    	                   ntp 				/////
+/////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+
+
+
+TESTEO
+
+#Comprobar log de nsd
+doas tail -f /var/log/nsd.log //para testear el log    
+
+#Comprobar resolución directa de primario
+dig -6 @2001:470:736b:1ff::3 AAAA router1.1.ff.es.eu.org
+
+#Comprobar resolucion inversa de primario
+dig -6 @2001:470:736b:1ff::3 -x 2001:470:736b:1ff::1
+
+#Comprobar resolución directa de secundario
+dig -6 @2001:470:736b:1ff::4 AAAA router1.1.ff.es.eu.org
+
+#Comprobar resolucion inversa de secundario
+dig -6 @2001:470:736b:1ff::4 -x 2001:470:736b:1ff::1
+
+
+
+
+
+	
+
+
+
