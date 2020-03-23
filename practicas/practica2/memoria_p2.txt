@@ -27,7 +27,10 @@ los alias... en .profile
 
 configuro como clientes DNS, todas las máquinas
 -----------------------------------------------
-Añado en resolv.conf la ip del servidor de nombres recursivo -> 2001:470:736b:1ff::2
+Añado en resolv.conf la ip del servidor de nombres recursivo -> 
+		lookup file bind
+		nameserver 2001:470:736b:1ff::2 
+resolver??
 
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
@@ -79,14 +82,14 @@ Añado en resolv.conf la ip del servidor de nombres recursivo -> 2001:470:736b:1
         provide-xfr: 2001:470:736b:1ff::4 mskey #provee informacion de la zona al secundario
 
    #zona directa "1.ff.es.eu.org"
-   #zone:
+   zone:
         name: "1.ff.es.eu.org"
         zonefile: "1.ff.es.eu.org.directo"
         include-pattern: "tosecondary"
 
 
    #zona inversa "1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa"
-   #zone:
+   zone:
         name: "1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa"
         zonefile: "1.ff.es.eu.org.inverso"
         include-pattern: "tosecondary"
@@ -118,9 +121,12 @@ $ORIGIN 1.ff.es.eu.org.
         IN      NS      ns2.1.ff.es.eu.org.
 ns1     IN      AAAA    2001:470:736b:1ff::3
 ns2     IN      AAAA    2001:470:736b:1ff::4
+ntp1	IN	AAAA	2001:470:736b:1ff::2
 router1 IN      AAAA    2001:470:736b:f000::111
+otro_servidor	IN	AAAA	2001:470:736b:1ff::f
 o1ff3   IN      CNAME   ns1
 o1ff4   IN      CNAME   ns2 
+
 
 	1.ff.es.eu.org.inverso
 	----------------------
@@ -241,6 +247,9 @@ forward-zone:
         forward-addr: 2001:4860:4860::8888      # google.com v6
         forward-first: yes                      # try direct if forwarder fails
 
+unbound-checkconf
+/etc/rc.conf.local
+		unbound_flags="" //unbound arrancado en el inicio
 
 
 
@@ -248,16 +257,63 @@ Tras configurar unbound, añado la maquina otro_servidor en la zona directa e in
 Modifico manualmente el numero de serie de las zonas a 2020031102. Esto manda un notify automático al servidor secundario ns2 que actualiza las zonas en un tiempo denotado en provide-xfr de ns1.
 Para forzar a que transfiera automaticamente la zona, desde ns2 hago nsd-control transfer.
 
+1) Modifico zone y cambio nº serie
+2) Desde primario nsd-control write zone (notify automatico a secundario)
+3) desde secundario nsd-control transfer zone
+
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 ////////    	                   ntp 				/////
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
+-Añado el nombre DNS ntp1 para o1ff2 en /var/nsd/zones/1.ff.es.eu.org.directo 
+	o1ff2   IN      CNAME   ntp1
 
+1) Modifico zone y cambio nº serie
+2) Desde primario nsd-control write zone (notify automatico a secundario)
+3) desde secundario nsd-control transfer zone
+
+-Edito el fichero /etc/ntpd.conf
+	# $OpenBSD: ntpd.conf,v 1.14 2015/07/15 20:28:37 ajacoutot Exp $
+	#
+	# See ntpd.conf(5) and /etc/examples/ntpd.conf
+
+	listen on ::1
+	listen on 2001:470:736b:1ff::2
+
+	server 2001:470:0:50::2 
+	server 2001:470:0:2c8::2
+	server prometeo.cps.unizar.es
+	server ntp.unizar.es
+
+
+listen on es para: que otros hosts se puedan sincronizarse con este servidor ntp.
+server: Son los servidores con los que se sincroniza por defecto que son de 
+stratum 1.
+
+-Hago que ntpd se ejecute en el arranque. En /etc/rc.conf.local añado
+ntpd_flags=-s. La opción -s permite al demonio ntpd que actualize inmediatamente la hora de alguno de sus servidores referencia si el reloj local tiene un desfase de mas de 180 segundos. Esto permite evitar correcciones de tiempo muy largas.
+
+Offset: Offset generally refers to the difference in time between an external timing reference and time on a local machine. The greater the offset, the more inaccurate the timing source is. Synchronised NTP servers will generally have a low offset. Offset is generally measured in milliseconds.
+
+Delay: Delay in a NTP server describes the round-trip delay or latency of a timing message passed from client to server and back again. The delay is important so that network delays can be calculated and accounted for by a time client.
+
+-Configuracion clientes (o1ff3, o1ff4)
+
+Fichero /etc/ntpd.conf
+# $OpenBSD: ntpd.conf,v 1.14 2015/07/15 20:28:37 ajacoutot Exp $
+#
+# See ntpd.conf(5) and /etc/examples/ntpd.conf
+server ntp1.1.ff.es.eu.org
+
+Fichero /etc/rc.conf.local //activar en el arranque ntpd
+ntpd_flags=-s
+
+ntpd -s //activar manualmente ntpd
 
 TESTEO
-
+------------- DNS
 #Comprobar log de nsd
 doas tail -f /var/log/nsd.log //para testear el log    
 
@@ -273,7 +329,24 @@ dig -6 @2001:470:736b:1ff::4 AAAA router1.1.ff.es.eu.org
 #Comprobar resolucion inversa de secundario
 dig -6 @2001:470:736b:1ff::4 -x 2001:470:736b:1ff::1
 
+-------------UNBOUND
+Comprobar que se reduce el tiempo por cacheo
+unbound-host google.com
 
+-------------NTP
+#ver la hora
+date
+#Comprobar que se ha sincronizado con servidores stratum
+ntpctl -sa
+
+#Desde central comprobar delay de o1ff2 con central
+ntpdate -q ntp1.1.ff.es.eu.org
+
+#Comprobar log en /var/log/daemon
+
+
+------
+rcctl = lista demonios activos en openBSD
 
 
 

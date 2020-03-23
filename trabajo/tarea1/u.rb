@@ -34,9 +34,9 @@ def ssh_command(maquinas, remote_command)
 		ssh = Net::SSH.start(host, "a755232",:timeout=> 7)
 		res = ssh.exec!(remote_command)
 		puts "máquina" + num_host.to_s + ": exito"
-		puts res 
+		puts res + "\n\n" 
 	    rescue
-		puts "máquina" + num_host.to_s + ": UNREACHABLE"
+		puts "máquina" + num_host.to_s + ": UNREACHABLE\n\n"
 	    end
 	    num_host = num_host + 1
 	end
@@ -47,28 +47,25 @@ end
 def obtener(maquinas, f_config) 
     f = File.expand_path(f_config) # Expandir ~
     if File.file?(f)
-	File.foreach(f) {|host| maquinas.insert(-1, host.strip)} 
+	File.foreach(f) { |host| maquinas << host.strip } 
     end
 end
 
-#Analiza los argumentos del script.
-#Si entrada correcta, ejecuta la funcion asociada al subcomando.
-#Si entrada incorrecta, aborta ejecución.
-def parse(maquinas)
-    comando = ARGV[0]
-    case comando
-    when "p"
-        ping_tcp(maquinas)
-    when "s"
-        ssh_command(maquinas, ARGV[1])
-    else
-        abort "Uso: u [p] [s \"comando\"]\n" +
-              "  p		ping al puerto 22\n" +
-              "  s \"command\" 	ejecucion comando remoto\n"
-    end
-end
+options = ["p", "s"] #Comandos disponibles
+command = ARGV.first #Comando introducido
 
-f_config = "~/.u/hosts"   #Fichero de configuración por defecto
-maquinas=[]	 	  #maquinas objetivo del script
-obtener(maquinas, f_config)
-parse(maquinas)
+#Error checking: Se aborta ejecución si command no está implementado o es vacío
+abort "Uso: u [p] [s \"comando\"]\n" +
+      "  p		ping al puerto 22\n" +
+      "  s \"command\" 	ejecucion comando remoto\n"\
+      unless options.include?(command)
+
+maquinas=[]		   #Máquinas target
+f_config = "~/.u/hosts"    #Fichero de configuración por defecto
+obtener(maquinas, f_config)#Obtenemos las máquinas objetivo del fichero de configuración
+
+if command == "p"
+       ping_tcp(maquinas)
+elsif command == "s"
+       ssh_command(maquinas, ARGV[1])
+end       
