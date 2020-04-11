@@ -10,6 +10,7 @@ require 'rubygems'
 require 'net/ping/tcp'
 require 'net/ssh'
 require 'resolv'
+require 'net/scp'
 
 # <maquinas> := {"<domain>"|"<ip>"}
 # Ejecuta ping TCP al puerto 22 con timeout de 0.1s a las máquinas especificadas
@@ -44,6 +45,37 @@ def ssh_command(maquinas, remote_command)
 	end
 end
 
+
+# Aplica un manifiesto puppet del directorio <f_manifiestos> en <maquinas>
+def manif_puppet(maquinas, d_manifiestos, lista)
+    	f = File.expand_path(d_manifiestos) # Expandir ~
+	lista.each do |manifiesto|
+	        if File.file?(f + "/" +  manifiesto)
+		    begin
+			maquinas.each do |host|
+			      Net::SSH.start(host, "a755232",:timeout=> 7) do |ssh|
+				   ssh.exec!("mkdir /tmp/.puppet")
+				   scp = Net::SCP.start(host, "a755232")
+				   scp.upload! f + "/" + manifiesto, "/tmp/.puppet"
+				   os = ssh.exec!("uname")
+				   if os.strip == "OpenBSD" #host tiene sistema operativo openBSD
+			               res = ssh.exec!("doas puppet apply /tmp/.puppet/" + manifiesto)
+		    		   else #host tiene sistema operativo ubuntu
+				       res = ssh.exec!("sudo puppet apply /tmp/.puppet/" + manifiesto)
+				   end
+				   ssh.exec!("rm -rf /tmp/.puppet")
+				   puts "máquina " + host + ": exito"
+				   puts res
+			      end
+			end
+	    	    rescue
+			puts "máquina : UNREACHABLE\n\n"
+	    	    end
+		else
+		    abort "Fichero " + manifiesto + " no existe"
+		end
+	end
+end	
 
 # Comprueba que el grupo especificado en <grupo> se incluye en f_config
 # con formato +grupo. Por defecto identifica todos los grupos incluidos.
@@ -102,6 +134,10 @@ end
 options = ["p", "s", "c"] 	#Comandos disponibles
 first = ARGV[0] 		#Primer argumento introducido
 second = ARGV[1] 		#Segundo argumento introducido (puede ser vacío)
+maquinas=[]                	#Guarda ips y dominos host
+f_config = "~/.u/hosts"    	#Fichero máquinas hosts 
+d_manifiestos = "~/.u/manifiestos"	#Directorio manifiestos puppet
+
 
 #Error checking
 abort "Uso: u [p] [s \"comando\"]\n" +
@@ -110,9 +146,7 @@ abort "Uso: u [p] [s \"comando\"]\n" +
       unless options.include?(first) or options.include?(second)
 
 
-maquinas=[]		   #Máquinas objetivo del script
-f_config = "~/.u/hosts"    #Fichero de configuración por defecto
-
+#Guardar los hosts en <maquinas>
 if options.include?(first)
 	obtener(maquinas, f_config) #Caso: u p
 elsif (first =~ Regexp.union([Resolv::IPv4::Regex, Resolv::IPv6::Regex]))
@@ -121,10 +155,13 @@ else
 	obtener(maquinas, f_config, first) #caso u grupo p
 end
 
-=begin
+#Ejecución subcomando
+if !(options.include?(first)) then ARGV.shift end
+command = ARGV[0]
 if command == "p"
        ping_tcp(maquinas)
 elsif command == "s"
        ssh_command(maquinas, ARGV[1])
+elsif command == "c"
+	manif_puppet(maquinas, d_manifiestos, ARGV[1].split(","))
 end   
-=end

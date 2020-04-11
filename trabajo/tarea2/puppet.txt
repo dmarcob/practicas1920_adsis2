@@ -1,0 +1,18 @@
+puppet resource --help //ayuda
+puppet resource --type //tipos disponibles
+puppet resource service sshd //estado del demonio ssh
+
+file { '/etc/config':
+   ensure 	=> 'file'
+   content 	=> 'Hola me llamo paco'
+   ctime 	=> '2017-03-17 09:59:09 +0530'
+   mode 	=> '644'
+   mtime 	=>
+   owner 	=> '0'
+   type 	=> 'file',
+
+Manually check to puppetmaster: puppet agent -t
+client will manually check the last configuration in puppetmaster
+
+ntp:
+https://blog.scottlowe.org/2012/07/05/using-puppet-with-multiple-operating-systems/
