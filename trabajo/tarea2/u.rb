@@ -50,7 +50,7 @@ end
 # Por cada grupo incluido añade en <maquinas> los hosts asociados a la 
 # definicion del grupo con formato -grupo
 def parse(maquinas, f_config, grupo="")
-	gruposInc=[] #Grupos incluidos en el fichero de configuracion
+	gruposInc=[] #Guardo los grupos con formato +grupo de f_config
 	File.foreach(f_config) do |line|
 		line = line.strip
 		if line[0] == "+"
@@ -82,7 +82,7 @@ def parse(maquinas, f_config, grupo="")
 			incluir = false
 		end
 	end
-	maquinas = maquinas.uniq
+	maquinas = maquinas.uniq # Filtro los hosts que aparecen más de una vez.
 end
 
 # Lee y guarda @ips y dominios perteneciente al grupo <grupo> en <maquinas>
@@ -90,7 +90,6 @@ end
 def obtener(maquinas, f_config, grupo="")
     	f = File.expand_path(f_config) # Expandir ~
     	if File.file?(f)
-             #File.foreach(f) { |host| maquinas << host.strip} 
 	     parse(maquinas, f, grupo)
         else
             abort "Fichero " + f_config + " no existe"
@@ -117,7 +116,7 @@ f_config = "~/.u/hosts"    #Fichero de configuración por defecto
 if options.include?(first)
 	obtener(maquinas, f_config) #Caso: u p
 elsif (first =~ Regexp.union([Resolv::IPv4::Regex, Resolv::IPv6::Regex]))
-	maquinas = first #Caso: u ip p
+	maquinas << first #Caso: u ip p
 else
 	obtener(maquinas, f_config, first) #caso u grupo p
 end
