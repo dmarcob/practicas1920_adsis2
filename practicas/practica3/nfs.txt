@@ -1,0 +1,15 @@
+IDENTITY MAPPING:
+Unix identifica a los usuarios por su UID y GID en /etc/passwd.
+NFS identifica a los usuarios por un string de la forma: user@nfs-domain
+El identity mapping lo ejecutan el cliente y el servidor.
+Si el cliente ejecuta ls -l el identity mapping del servidor usa su passwd local para convertir los UID y GID en user@nfs-domain. El identity mapping del cliente usa su passwd local para convierte user@nfs-domain en los UID y GUID locales.(Si no corresponde con ninguno se usa la cuenta nobody)
+
+nfs startup script: /etc/init.d/nfs-kernel-server
+nfsv4 solo usa nfsd
+
+servidor usa /etc/exports para situar los directorios a compartir
+Despues de modificarlo usar el comando: /usr/sbin/eportfs -a para permitir a nfs volver a leer /etc/exports sin rearrancar el servidor.
+
+TUTORIALES:
+ https://help.ubuntu.com/community/SettingUpNFSHowTo
+ https://help.ubuntu.com/community/NFSv4Howto

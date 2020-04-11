@@ -1,0 +1,206 @@
+###################### MAQUINA BASE###############
+- copio nueva mv base ubuntu:
+cp u1604.qcow2 /misc/alumnos/as2/as22019/a755232/
+- Cambio permisos
+chmod 666 u1604.*
+-longnombre-administracionsistemas
+
+-Edito .profile
+set -o vi
+central='2001:470:736b:f000::1'
+orouter1="2001:470:736b:f000::111"
+o1ff2="2001:470:736b:1ff::2"
+o1ff3="2001:470:736b:1ff::3"
+o1ff4="2001:470:736b:1ff::4"
+u1ff5="2001:470:736b:1ff::5"
+
+-Creo usuario a755232
+adduser a755232
+-Le añado todos los grupos de longnombre
+sudo usermod -a -G sudo,admin,.., a755232
+
+##################### MAQUINA u1ff5 ##############
+- IP estatica 2001:470:736b:1ff::5
+fichero /etc/network/interfaces
+# This file describes the network interfaces available on your system
+# and how to activate them. For more information, see interfaces(5).
+
+source /etc/network/interfaces.d/*
+
+# The loopback network interface
+auto lo
+iface lo inet6 loopback
+
+# The primary network interface
+# This is an autoconfigured IPv6 interface
+#auto ens3
+#iface ens3 inet6 auto
+#	dns-nameservers 2001:470:20::2
+
+auto ens3
+iface ens3 inet6 manual
+
+auto ens3.199 
+iface ens3.199 inet6 static
+	address 2001:470:736b:1ff::5
+	netmask 64
+	gateway 2001:470:736b:1ff::1
+	autoconf 0
+	vlan-raw-device ens3 
+
+Dejo la interfaz ens3 activa y configura la vlan ens3.199
+
+Fichero /etc/sysctl.conf
+net.ipv6.conf.ens3.use_tempaddr = 0
+net.ipv6.conf.ens3.autoconf = 0
+net.ipv6.conf.ens3.accept_ra = 0
+
+Cambio el nombre de la maquina de ubuntu a u1ff5
+	Fichero /etc/hostname:
+		nfsnis1
+	Fichero /etc/hosts:
+		127.0.0.1	localhost
+		127.0.1.1	nfsnis1
+
+
+################## MAQUINA u1fe6 #########################
+
+-Añado en orouter1 /etc/hostname.vlan198
+	inet6 alias 2001:470:736b:1fe::1 64 vlan 198 vlandev vio0
+-Añado en orouter1 /etc/rad.conf
+	interface xxx.vlan198
+
+-FIchero /etc/network/interfaces en u1fe6 (de momento mal)
+source /etc/network/interfaces.d/*
+
+# The loopback network interface
+auto lo
+iface lo inet6 loopback
+
+# The primary network interface
+# This is an autoconfigured IPv6 interface
+#auto ens3
+#iface ens3 inet6 auto
+#	dns-nameservers 2001:470:20::2
+
+auto ens3 
+iface ens3 inet6 manual
+
+auto ens3.198 
+iface ens3.198 inet6 auto
+	accept_ra 1
+	autoconf 0
+	vlan-raw-device ens3 
+
+Fichero /etc/sysctl.conf
+net.ipv6.conf.ens3.use_tempaddr = 0
+net.ipv6.conf.ens3.autoconf = 0
+net.ipv6.conf.ens3.accept_ra = 0
+
+#########################Configuracion unbound u1ff5 u1fe6 #####
+Creo fichero /etc/resolvconf/resolv.conf.d/tail
+	lookup file bind
+	nameserver 2001:470:736b:1ff::2
+Actualizo el fichero: resolvconf -u
+Compruebo que unbound me resuelve: ping6 google.com
+
+##########################Configuracion ntpd o1ff3 o1ff4 ###########
+Comprobar log: tail -f /var/log/daemon
+Controlar demonios openBSD: doas rcctl
+Como en el arranque no se sincronizan pese a tener ntpd_flags="-s" en rc.conf.local
+hacer:
+	doas ntpd -s	  //Inicial manualmente
+	doaas ntpctl -sa //comprobar 
+
+########################Configuracion ntp u1ff5 u1fe6 #########
+Actualizo repositorios: sudo apt-get update
+Instalo ntp: sudo apt-get install ntpdate ntp
+Edito fichero /etc/ntp.conf
+	server ntp1.1.ff.es.eu.org
+Mirar log ntpd: sudo tail -f syslog
+Comprobar sincronizacion: ntpdate -q ntpserver
+			  ntpq -p
+
+
+
+
+#######################nfs servidor u1ff5 #####################
+-instalo el paquete nfs-kernel-server
+-Creo los directorios /srv/nfs/home/
+-Fichero /etc/default/nfs-common
+	NEED_IDMAP=YES
+
+aFichero /etc/idmapd.conf
+[General]
+
+Verbosity = 0
+Pipefs-Directory = /run/rpc_pipefs
+# set your own domain here, if id differs from FQDN minus hostname
+Domain = 1.ff.es.eu.org
+
+[Mapping]
+
+Nobody-User = nobody
+Nobody-Group = nogroup
+
+Añado el dominio que sera comun al servidor y al cliente para que el identity mapping
+traduzca de formaconsistente los UID y GID de los usuarios tanto en el servidor como el cliente por 
+un string con formato user@1.ff.es.eu.org
+Además si el identity mapping no encuentra en el passwd local una correspondencia entre el string user@1.ff.es.eu.org y su UID y GUID usa por defecto la cuenta nobody nogroup.
+
+-Fichero /etc/exports
+# /etc/exports: the access control list for filesystems which may be exported
+#               to NFS clients.  See exports(5).
+#
+/srv/nfs4/home  2001:470:736b:1fe::/64(rw,fsid=0,insecure,no_subtree_check,async,root_squash)
+/srv/nfs4/home/a755232 2001:470:736b:1fe::/64(rw,nohide,insecure,no_subtree_check,async,root_squash)
+
+-Actualizo nfs con los nuevos cambios de export: exportfs -a
+-Compruebo el psudosistema de ficheros que exporta: exportfs -v
+
+//PERMISOS
+Carpeta a755232 permisos 770, pertenece a usuario a755232, grupo a755232
+-Montaje bind manual: sudo mount --bind /home/a755232 /srv/nfs4/home/a755232/
+-Montaje bind automatico en /etc/fstab:
+	/home/a755232 /srv/nfs4/home/a755232	none	bind
+
+
+Para poder compartir el fichero /home/a755232 al cliente1 (u1fe6), lo primero es rellenar idmap.conf
+con el dominio que ambos van a compartir, después para que el idntify mapping actúe de forma consistente, el nombre de usuario tanto en el cliente como en el servisor nfs va a ser a755232. El identify mapping nos permite que ambos puedan tener distintos uid y guid en cliente y servidor, mapeando estos identificadores localmente con el string user@domain comun para ambas máquinas.
+El servidor hara un montaje --bind de /home/a755232 en el pseudosistema de ficheros compartido
+/srv/nfs4/home, concretamente en el directorio /srv/nfs4/home/a755232. Para mantener consistente este montaje, se guardara en /etc/fstab con la linea: 
+Después el servidor compartira este directorio con el cliente añadiendo en el directorio /etc/exports
+la linea:
+Los flags son y significan:
+El cliente a su vez montara remotamente el fichero compartido añadiendo a /etc/fstab 
+la linea:       ....nfsnis1.1.ff.es.eu.org:/a755232 /home/a755232 .....
+
+################Configuracion cliente nfs u1fe6 ##############################
+Configuro /etc/default/nfs-common -> NEED_IDMAP=YES
+configuro /etc/idmapd.conf -> Domain = 1.ff.es.eu.org
+Compruebo que el servidor me exporta correctamente el fichero:
+Export list for nfsnis1.1.ff.es.eu.org:
+/srv/nfs4/home/a755232 2001:470:736b:1fe::/64
+/srv/nfs4/home         2001:470:736b:1fe::/64
+
+-Monto manualmente el fichero a755232 compartido:
+	 sudo mount -v -t nfs4 nfsnis1.1.ff.es.eu.org:/a755232 /home/a755232
+-Monto automaticamente el fichero a755232 compartido en /etc/fstab:
+
+-Fichero etc/fstab
+nfsnis1.1.ff.es.eu.org:a755232 /home/a755232 nfs4 rw,nolock,noauto,x-systemd.automount,x-systemd.device-timeout=30,retry=0,_netdev 0 0
+-Comando mount: sudo mount -a -t nfs4
+-Comando umount: sudo umount /opt/mounted
+
+PROBLEMA ENCONTRADO:
+Al montar en el arranque con fstab el directorio remoto 
+nfsnis1.1.ff.es.eu.org:/a755232, se observaba en /var/log/syslog, que se hacía 
+antes de que la tarjeta de red ens3.198 estubiese configurada y diese conexion a la red, lo que ocasionaba que nfs devolviese un error de timeout al intentar montar el directorio y no obtener respuesta del servidor nfs en o1ff5. Esto se soluciono añadiendo las opciones ,x-systemd.automount,noauto en fstab para que el montaje lo hiciese systemd una vez que la red estaba lista. 
+Esta configuracion impide montar con mount -a, pero permite tener el directorio montado en el arranque.
+
+
+###################ldap server master u1ff5 ###############33
+
+Instalo slapd y herramientas complementarias
+sudo apt install slapd ldap-utils
+Contraseña admin ldap: adminope1
