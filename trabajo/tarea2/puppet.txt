@@ -16,3 +16,4 @@ client will manually check the last configuration in puppetmaster
 
 ntp:
 https://blog.scottlowe.org/2012/07/05/using-puppet-with-multiple-operating-systems/
+https://puppet.com/docs/puppet/5.5/lang_summary.html
