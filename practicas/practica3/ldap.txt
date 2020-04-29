@@ -1,0 +1,17 @@
+El protocolo LDAP (Light Directory Access Protocol) accede a los directorios LDAP
+   1)Un directorio LDAP es un arbol de entradas jerarquico llamado Dit Directory Information Tree
+   2)Una entrada es un conjunto de atributos.
+   3)Un atributo tiene un tipo(nombre/descripcion) y uno o mas valores.
+   4)Un atributo debe estar definifo en al menos una objectClass
+   5)Atributos y objectClasses estan definidos en schemas, (un objectclass es un atributo especial)
+   6)Cada entrada tiene un identificador unico: Distinguished Name (DN o dn).
+     Esta formado por el RDN (Relative Distinguished Name) seguido de la entrada DN del padre.
+   7)El DN no es un atributo. No se considera parte de la entrada.
+
+Entry = object or container or node
+
+Cualquier informacion que se añade al DIT se have en formato LDIF.
+
+Se recomienda trabajar añadiendo LDIF files sobre /etc/ldap/slapd.d
+
+

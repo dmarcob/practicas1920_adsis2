@@ -62,6 +62,11 @@ Cambio el nombre de la maquina de ubuntu a u1ff5
 		127.0.0.1	localhost
 		127.0.1.1	nfsnis1
 
+testeo:
+	ifup ens3.199 #Levanto la interfaz vlan
+	ip a show ens3.199 #Compruebo que se le ha asignado la ip estatica
+	route -6 # Compruebo el router por defecto
+	ping6 2001:470:736b:1ff::1 #Compruebo conexion
 
 ################## MAQUINA u1fe6 #########################
 
@@ -111,6 +116,7 @@ Como en el arranque no se sincronizan pese a tener ntpd_flags="-s" en rc.conf.lo
 hacer:
 	doas ntpd -s	  //Inicial manualmente
 	doaas ntpctl -sa //comprobar 
+	ntp.drift //mirar direferncia con servidor externo
 
 ########################Configuracion ntp u1ff5 u1fe6 #########
 Actualizo repositorios: sudo apt-get update
@@ -178,7 +184,8 @@ la linea:       ....nfsnis1.1.ff.es.eu.org:/a755232 /home/a755232 .....
 ################Configuracion cliente nfs u1fe6 ##############################
 Configuro /etc/default/nfs-common -> NEED_IDMAP=YES
 configuro /etc/idmapd.conf -> Domain = 1.ff.es.eu.org
-Compruebo que el servidor me exporta correctamente el fichero:
+Compruebo que el servidor me exporta correctamente el fichero: sudo showmount -e nfsnis1.1.ff.es.eu.org
+
 Export list for nfsnis1.1.ff.es.eu.org:
 /srv/nfs4/home/a755232 2001:470:736b:1fe::/64
 /srv/nfs4/home         2001:470:736b:1fe::/64
@@ -198,9 +205,117 @@ nfsnis1.1.ff.es.eu.org:/a755232, se observaba en /var/log/syslog, que se hacía
 antes de que la tarjeta de red ens3.198 estubiese configurada y diese conexion a la red, lo que ocasionaba que nfs devolviese un error de timeout al intentar montar el directorio y no obtener respuesta del servidor nfs en o1ff5. Esto se soluciono añadiendo las opciones ,x-systemd.automount,noauto en fstab para que el montaje lo hiciese systemd una vez que la red estaba lista. 
 Esta configuracion impide montar con mount -a, pero permite tener el directorio montado en el arranque.
 
-
-###################ldap server master u1ff5 ###############33
+############################################################
+###################ldap server master u1ff5 ################
+############################################################
 
 Instalo slapd y herramientas complementarias
 sudo apt install slapd ldap-utils
 Contraseña admin ldap: adminope1
+
+Compruebo que el puerto del servicio está abierto: sudo netstat -natup | grep slapd
+Añado el dominio a la configuracion slapd: sudo depkg-reconfigure slapd
+
+
+Fichero base.ldif: CREO DOS ENTRADAS PEOPLE Y GROUPS
+Añadir entradas: 
+	ldapadd -x -D cn=admin,dc=1,dc=ff,dc=es,dc=eu,dc=org -W -f base.ldif
+Comprobar entradas:
+	sudo slapcat
+Eliminar entrada people:
+	 ldapdelete -x -D"cn=admindc=1,dc=ff,dc=es,dc=eu,dc=org" -w adminope1 "ou=people,dc=1,dc=ff,dc=es,dc=eu,dc=org"
+
+Generar contraseña cifrada: slappasswd
+
+Fichero base.ldif:
+dn: ou=peopledc=1,dc=ff,dc=es,dc=eu,dc=org
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,dc=1,dc=ff,dc=es,dc=eu,dc=org
+objectClass: organizationalUnit
+ou: groups 
+
+Creo y aplico el usuario pepe:
+Fichero ldapuser.ldif:
+bjectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: pepe
+sn: ubuntu
+userPassword: {SSHA}eHhsh5tF0RxcH6pbIf05EzpiTxHghSbf 
+loginShell: /bin/bash
+uidNumber: 2000
+gidNumber: 2000
+homeDirectory: /home/pepe
+
+dn: cn=pepe,ou=groups,dc=1,dc=ff,dc=es,dc=eu,dc=org
+objectClass: posixGroup
+cn: pepe
+gidNumber: 2000
+memberUid: pepe
+
+
+testeo que existe el cliente:
+	ldapsearch -xLLL -b "dc=somebooks,dc=local" uid=jlopez sn givenName cn
+################################################
+############### ldap cliente u1fe6 #############
+################################################
+
+- Instalo ldap cliente: sudo apt-get install libnss-ldap libpam-ldap ldap-utils
+- Configuración en la instalación:
+	ldap://nfsnis1.1.ff.es.eu.org/ #servidor
+	autoconfiguracion ldap -> si
+	version -> 3
+	database root admin -> si
+	ldap login -> no
+	cuenta admin-> cn=admin,dc=1,dc=ff,dc=es,dc=eu,dc=org
+
+- /etc/nsswitch.conf
+	passwd:     compat ldap
+	group:     compat ldap
+	shadow:     compat ldap
+
+-/etc/pam.d/common-password
+	eliminar use_authok
+
+- /etc/pam.d/common-session
+	session optional pam_mkhomedir.so skel=/etc/skel umask=077
+
+-Compruebo conexion con servidor logeandome en cuenta ldap pepe
+
+
+############################################################
+######## Configuracion start TLS  #################
+############################################################
+creacion certificado:
+- Accedo a /etc/ssl/private con shell root: sudo -i
+
+Inicio startTLS:
+.
+.
+.
+.
+-A parte de la configuracion de server-world, añado TLS_REQCERT allow en el servidor
+-Compruebo la conexxion tls: 
+	1)ldapwhoami -d 1 -v -H ldap://nfsnis1.1.ff.es.eu.org -x -ZZ
+	me devuelve anonymus entonces OK
+
+-Testeo hacer login en el  cliente: 
+	https://www.linuxito.com/gnu-linux/nivel-medio/1030-testear-servidores-ldap-con-ldapwhoami
+
+
+
+
+##############################################################
+#######  Replicacion #########################################
+##############################################################
+
+- Añado un nuevo nodo llamado: nfsnis2(2001:470:736b:1ff::7) que sera la replica, u1ff7
+- Aplico el mismo procedimiento que con el servidor ldap u1ff5
+- Aplico config especifica al master
+- Aplico config especifica al slave
+
+testeo que hay conexion del consumidor con el proveedor:
+desde el consumidor: ldapsearch -x -b 'ou=people,dc=1,dc=ff,dc=es,dc=eu,dc=org'
+

@@ -142,7 +142,8 @@ d_manifiestos = "~/.u/manifiestos"	#Directorio manifiestos puppet
 #Error checking
 abort "Uso: u [p] [s \"comando\"]\n" +
       "  p		ping al puerto 22\n" +
-      "  s \"command\" 	ejecucion comando remoto\n"\
+      "  s \"command\" 	ejecucion comando remoto\n" +
+      "  c \"manifiesto\" ejecucion manifiesto remoto"\
       unless options.include?(first) or options.include?(second)
 
 
