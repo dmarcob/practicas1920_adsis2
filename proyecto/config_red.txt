@@ -1,0 +1,86 @@
+################ maquina orouter1 #############################
+route -n show -inet6 #Compruebo las rutas
+doas sh /etc/netstart #Reiniciar configuracion de red
+netstat -rn #ver rutas
+
+Añado una nueva ruta estatica de salida la subred 2001:470:736b:110::/60
+  /etc/hostname.vlan110
+	inet6 alias 2001:470:736b:110::1 64 vlan 110 vlandev vio0
+	!route add -inet6 2001:470:736b:110::/60 2001:470:736b:110::2
+	-autoconfprivacy
+
+
+IMPORTANTE: en hostname.vlan110 añado la dirección ip de esta tarjeta vlan y una mascara 64 indicando que si la ip destino tiene ::110:: entonces el paquete se manda a red vlan110 inmediata al orouter1, PERO si ls ip destino tiene ip ::11:: (mascara 60, la ruta añadida debajo) entonces ese paquete se encamina al siguiente salto/router que es orouter11 de ip 2001:470:736b:110::2.
+
+CONCLUSIONES:
+Si router redirige a red inmediata, el gateway es la ip de su interfaz que comunica con esa red.
+
+Si router redireife a red NO contigua, el gateway es la ip del router más proximo que comunica con esa red.
+
+
+
+############### maquina orouter11 ############################
+Dejo la interfaz fisica vio0 activa para activar sobre ella interfaces vlan
+	/etc/hostname.vio0
+		-inet6
+		up
+		-autoconfprivacy
+
+Activo interfaz vlan110 para conexion con orouter1
+En este caso no hace falta añadir otra ruta puesto que si la ip destino pertenece a otra red que no sea la vlan110 entonces redirige al gateway por defecto que es 2001:470:736b:110::1 que es justo el siguiente router (orouter1)
+	/etc/hostname.vlan110
+		inet6 alias 2001:470:736b:110::2 60 vlan 110 vlandev vio0
+		-autoconfprivacy
+
+
+Añado default route añadiendo el router por defecto
+	/etc/mygate
+		2001:470:736b:110::1
+
+Añado nombre dns de orouter11
+	/etc/myname
+		orouter11.1.ff.es.eu.org
+
+Activo la redireccion de paquetes modo router
+	/etc/sysctl.conf
+		net.inet6.ip6.forwarding=1
+
+Añado cliente unbound
+	/etc/resolv.conf
+		nameserver 2001:470:736b:1ff::2
+
+Añado cliente ntp
+	/etc/ntpd.conf
+		server 2001:470:736b:1ff::2
+	
+	/rc.conf.local
+		ntpd_flags="-s"
+
+Añado interfaz vlan111 para conexion con subred de servidores (ipa,nfs,zabbix)
+	/etc/hostname.vlan111
+		inet6 alias 2001:470:736b:111::1 64 vlan 111 vlandev vio0
+		-autoconfprivacy
+	
+
+Añado interfaz vlan112 para conexion con subred de clientes (cliente1,cliente2) 
+	/etc/hostname.vlan112
+		inet6 alias 2001:470:736b:112::1 64 vlan 112 vlandev vio0
+		-autoconfprivacy
+
+
+
+
+PROBLEMA RED CONECTAR DOS ROUTERS.
+HAY QUE HACER QUE EL ROUTER OROUTER1 REDIRIGA PAQUETES AL SIGUIENTE SALTO.
+Es decir la vlan10 ip 2001:470:736b:110::2
+Y VICEVERSA
+
+################## maquina c1112 (IPA maestro) #####################
+restart network: sudo systemctl restart network
+mirar estado: sudo systemctl status network
+
+Edito /etc/sysconfig/network-scripts/ifcg-eth0
+
+Creo /etc/sysconfig/network-scripts/ifcg-etho.111
+Para añadir el UUID: sudo uuidgen eht0.111 >> ifcfg-eth0.111
+
