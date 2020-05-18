@@ -1,4 +1,7 @@
-################ maquina orouter1 #############################
+PROBLEMAS
+	networkmanager activo
+	
+º################ maquina orouter1 #############################
 route -n show -inet6 #Compruebo las rutas
 doas sh /etc/netstart #Reiniciar configuracion de red
 netstat -rn #ver rutas
@@ -68,6 +71,13 @@ Añado interfaz vlan112 para conexion con subred de clientes (cliente1,cliente2)
 		-autoconfprivacy
 
 
+- En orouter11 enciendo el servicio rad para la vlan112
+        /etc/rad.conf
+                interface vlan112
+        /etc/rc.conf.local
+                rad_flags=""
+        Compruebo: doas rcctl check rad
+
 
 
 PROBLEMA RED CONECTAR DOS ROUTERS.
@@ -75,12 +85,119 @@ HAY QUE HACER QUE EL ROUTER OROUTER1 REDIRIGA PAQUETES AL SIGUIENTE SALTO.
 Es decir la vlan10 ip 2001:470:736b:110::2
 Y VICEVERSA
 
-################## maquina c1112 (IPA maestro) #####################
+################## maquina c1112 (ipa1) #####################
 restart network: sudo systemctl restart network
 mirar estado: sudo systemctl status network
 
-Edito /etc/sysconfig/network-scripts/ifcg-eth0
 
-Creo /etc/sysconfig/network-scripts/ifcg-etho.111
+-Elimino  NetworkManager
+        sudo systemctl stop NetworkManager
+        sudo systemctl disable NetworkManager
+        sudo yum remove NetworkManager
+
+
+-Edito /etc/sysconfig/network-scripts/ifcg-eth0
+	TYPE="Ethernet"
+	PROXY_METHOD="none"
+	BROWSER_ONLY="no"
+	DEFROUTE="yes"
+	IPV4_FAILURE_FATAL="no"
+	IPV6INIT="no"
+	NAME="eth0"
+	UUID="7f2813c5-c37c-4b77-ac7c-3b0dc20651e7"
+	DEVICE="eth0"
+	ONBOOT="yes"
+	IPV6_PRIVACY="no"
+
+IPV6INIT esta a no para indicar que no queremos que tenga una ipv6 
+
+-Creo /etc/sysconfig/network-scripts/ifcg-etho.111
 Para añadir el UUID: sudo uuidgen eht0.111 >> ifcfg-eth0.111
+	
+	VLAN=yes
+	TYPE=vlan
+	PHYSDEV=eth0
+	DEVICE=eth0.111
+	VLAN_ID=111
+	GVRP=no
+	REORDER_HDR=yes
+	MVRP=no
+	PROXY_METHOD=none
+	BROWSER_ONLY=NO
+	IPV6INIT=yes
+	IPV6_AUTOCONF=no
+	IPV6ADDR=2001:470:736b:111::2
+	IPV6_DEFAULTGW=2001:470:736B:111::1
+	DNS1=2001:470:736b:1ff::2
+	DOMAIN=1.1.ff.es.eu.org
+	IPV6_DEFROUTE=yes
+	IPV6_FAILURE_FATAL=no
+	IPV6_ADDR_GEN_MODE=stable-privacy
+	NAME=eth0.111
+	UUID=6dededc0-e86c-4a4f-9509-5e874ff851e2
+	ONBOOT=yes
 
+-En /etc/sysctl.conf
+        net.ipv6.conf.eth0.use_tempaddr=0
+        net.ipv6.conf.eth0.autoconf=0
+        net.ipv6.conf.eth0.accept_ra=0
+
+
+################## maquina c1113 (ipa2) #####################
+igual que c112
+
+################## maquina c1114 (nfs1) #####################
+cambiar DNS1 POR DNS1 Y DNS2 DE IPA
+
+################## maquina c1115 (zabbix1) #####################
+Cambiar DNS1 POR DNS1 Y DNS2 DE IPA
+################# maquina c1122 (cliente1) ##########
+
+
+-Elimino  NetworkManager
+	sudo systemctl stop NetworkManager
+	sudo systemctl disable NetworkManager
+	sudo yum remove NetworkManager
+
+-/etc/sisconfig/network-scripts/ifcg-eth0
+	TYPE="Ethernet"
+	PROXY_METHOD="none"
+	BROWSER_ONLY="no"
+	DEFROUTE="yes"
+	IPV4_FAILURE_FATAL="no"
+	IPV6INIT="no"
+	NAME="eth0"
+	UUID="7f2813c5-c37c-4b77-ac7c-3b0dc20651e7"
+	DEVICE="eth0"
+	ONBOOT="yes"
+
+-/etc/sisconfig/network-scripts/ifcg-eth0.112
+	VLAN=yes
+	TYPE=vlan
+	PHYSDEV=eth0
+	DEVICE=eth0.112
+	VLAN_ID=112
+	REORDER_HDR=yes
+	GVRP=no
+	MVRP=no
+	PROXY_METHOD=none
+	BROWSER_ONLY=no
+	IPV6_INIT=yes
+	IPV6_AUTOCONF=yes
+	DNS1=2001:470:736b:111::2
+	DNS2=2001:470:736b:111::3
+	DOMAIN=1.1.ff.es.eu.org
+	IPV6_DEFROUTE=yes
+	IPV6_FAILURE_FATAL=no
+	IPV6_ADDR_GEN_MODE=stable-privacy
+	NAME=eth0.112
+	UUID=3031016a-4c31-4175-bf0d-55234790465e
+	ONBOOT=yes
+
+-En /etc/sysctl.conf
+	net.ipv6.conf.eth0.use_tempaddr=0
+	net.ipv6.conf.eth0.autoconf=0
+	net.ipv6.conf.eth0.accept_ra=0
+
+
+-/etc/hostname

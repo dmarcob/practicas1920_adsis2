@@ -1,0 +1,285 @@
+#Inicialmente se van configurar los servidores nsd1 nsd2 y ntp1 para las máquinas
+#ipa1 e ipa2, posteriormente funcionaran con los servidores ipa1 e ipa2.
+
+PROBLEMAS
+	certmonger
+	Al añadir el keytab del host nfs ejecutaba el comando ipa-getkeytab como sudo pero el ticket (kinit admin) lo ejecutaba como usuario normal y por lo tanto no coincidían las credenciales de la caché de claves.
+
+#################basico Maquina orouter11 ##################################
+openBSD
+-Servicio resolucion DNS recursivo (unobund): 
+	/etc/resolv.conf
+		nameserver 2001:470:736b:1ff::2 
+-Servicio de tiempo (ntp):
+	/etc/ntpd.conf
+		server ntp1.1.ff.es.eu.org
+
+#################basico Maquina c1112 (ipa1) ###############################
+-Hostname
+	/etc/hostname
+		ipa1.1.1.ff.es.eu.org
+	Compruebo cambio con: hostnamectl
+	reboot
+
+
+	/etc/hosts
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+2001:470:736b:111::2  ipa1.1.1.ff.es.eu.org
+
+
+-Servicio resolucion DNS recursiva: opcion DNS1
+
+############### basico Maquina c1113 (ipa2) ################################
+-Servicio de tiempo chrony
+        1.- Instalo chrony: sudo yum install chrony
+        2.-COnfiguro /etc/chrony.conf
+		server ntp1.1.1.ff.es.eu.org     
+		server ntp2.1.1.ff.es.eu.org
+                # Record the rate at which the system clock gains/losses time.
+                driftfile /var/lib/chrony/drift
+                # Allow the system clock to be stepped in the first three updates
+                # if its offset is larger than 1 second.
+                makestep 1.0 3
+                # Specify directory for log files.
+                logdir /var/log/chrony
+
+        3.-Arranco chronyd: sudo systemctl start chronyd
+        4.-Habilito chronyd en arranque: sudo systemctl enable chronyd
+        5.-Compruebo la config de chronyd: chronyc tracking
+        6.-Compruebo el servidor ntp: chronyc sources
+        7.-Compruebo el offset: chronyc sourcestats
+
+El makestep es para configurar de golpe el reloj con el tiempo del servidor en vez de ajustar el reloj progresivamente. Solo si se desfasa 1 segundo y solo las 3 primeras actualizaciones con el servidor
+
+
+############### basico Maquina c1114 (nfs1) ################################
+############### basico Maquina c1115 (zabbix1) ################################
+############### basico Maquina c1122 (cliente1) ################################
+############### basico Maquina c1123 (cliente2) ################################
+como ipa2 todos. 
+
+############## dns glue record o1ff3 ############################
+$ORIGIN 1.ff.es.eu.org.
+@       IN      SOA     ns1.1.ff.es.eu.org.  a755232.1.ff.es.eu.org. (
+                        2020031200           ; numero serie
+                        21600                ; Refresca cada 6 horas
+                        3600                 ; Reintenta cada 1 hora
+                        604800               ; Expira despues de 1 semana
+                        86400 )              ; TTL minimo cliente de 1 dia
+        IN      NS      ns1.1.ff.es.eu.org.
+        IN      NS      ns2.1.ff.es.eu.org.
+1       IN      NS      ipa1.1.1.ff.es.eu.org.
+1       IN      NS      ipa2.1.1.ff.es.eu.org.
+ipa1.1  IN      AAAA    2001:470:736b:111::2
+ipa2.1  IN      AAAA    2001:470:736b:111::3
+ntp1    IN      AAAA    2001:470:736b:1ff::2
+ns1     IN      AAAA    2001:470:736b:1ff::3
+ns2     IN      AAAA    2001:470:736b:1ff::4
+router1 IN      AAAA    2001:470:736b:f000::111
+o1ff3   IN      CNAME   ns1
+o1ff4   IN      CNAME   ns2
+
+
+
+
+$ORIGIN 1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 
+@       IN      SOA     ns1.1.ff.es.eu.org.  a755232.1.ff.es.eu.org. (
+                        2020031106           ; numero serie
+                        21600                ; Refresca cada 6 horas 
+                        3600                 ; Reintenta cada 1 hora 
+                        604800               ; Expira despues de 1 semana
+                        86400 )              ; TTL minimo cliente de 1 dia      
+        IN      NS      ns1.1.ff.es.eu.org.
+        IN      NS      ns2.1.ff.es.eu.org.
+1       IN      NS      ipa1.1.1.ff.es.eu.org.
+1       IN      NS      ipa2.1.1.ff.es.eu.org.
+3.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f     IN      PTR     ns1.1.ff.es.eu.org.
+4.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f     IN      PTR     ns2.1.ff.es.eu.org.
+1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f     IN      PTR     router1.1.ff.es.eu.org.
+2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.f.f     IN      PTR     ntp1.1.ff.es.eu.org.
+
+VERIFICACION:
+Tras tener activada la zona directa e inversa de 1.1.ff.es.eu.org. solo en
+ipa1.1.1.ff.es.eu.org
+
+	- dig ipa1.1.1.ff.es.eu.org AAAA @8.8.8.8 +trace    OK
+	- dig -x 2001:470:736b:111::2  @8.8.8.8 +short      OK
+
+
+####################maestro freeipa c1112 #################################
+-sudo yum install freeipa-server ipa-server-dns
+	ERROR: certmonger.service no arranca
+	SOLUCION: sudo systemctl restart dbus
+		  sudo systemctl retart certmonger.service
+		  instalar el ipa-server-install	
+-ipa-server-install --setup-dns
+-Comprobar que SElinux esta desactivado
+	vi /etc/selinux/config
+
+-Añadir registros dns
+	ipa dnsrecord-find #Mostrar entradas de zona
+	#ZONA DIRECTA
+	ipa dnsrecord-add 1.1.ff.es.eu.org ipa2 --aaaa-ip-address=2001:470:736b:111::3
+	ipa dnsrecord-add 1.1.ff.es.eu.org nfs1 --aaaa-ip-address=2001:470:736b:111::4
+	ipa dnsrecord-add 1.1.ff.es.eu.org zabbix1 --aaaa-ip-address=2001:470:736b:111::5
+	ipa dnsrecord-add 1.1.ff.es.eu.org cliente1 --aaaa-ip-address=2001:470:736b:112::2
+	ipa dnsrecord-add 1.1.ff.es.eu.org cliente2 --aaaa-ip-address=2001:470:736b:112::3
+
+	#ZONA INVERSA
+	ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 --ptr-rec=ipa1.1.1.ff.es.eu.org.
+ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 3.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 --ptr-rec=ipa2.1.1.ff.es.eu.org.
+ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 4.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 --ptr-rec=nfs1.1.1.ff.es.eu.org.
+ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 5.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 --ptr-rec=zabbix1.1.1.ff.es.eu.org.
+ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.2 --ptr-rec=cliente1.1.1.ff.es.eu.org.
+ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 3.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.2 --ptr-rec=cliente2.1.1.ff.es.eu.org.
+
+-VERIFICACION:
+	dig zabbix1.1.1.ff.es.eu.org AAAA @8.8.8.8 +short
+	dig nfs1.1.1.1.ff.es.eu.org AAAA @8.8.8.8 +short
+	dig ipa2.1.1.1.ff.es.eu.org AAAA @8.8.8.8 +short
+	dig ipa1.1.1.1.ff.es.eu.org AAAA @8.8.8.8 +short
+	dig -x 2001:470:736b:111::2  @8.8.8.8 +short
+	dig -x 2001:470:736b:111::3  @8.8.8.8 +short
+	dig -x 2001:470:736b:111::4  @8.8.8.8 +short
+	dig -x 2001:470:736b:111::5  @8.8.8.8 +short
+
+-Añado un usuario. Su contraseña habrá que cambiarla al iniciar sesion
+ipa user-add pepe --first=Pepe --last=Garcia --password
+
+-Instalo el cliente ipa en cliente1 y me logeo en la cuenta pepe:
+	sudo yum install ipa-client
+	ipa-client-install --force-ntpd
+	authconfig --enablemkhomedir --update
+
+#################### ipa2 c1113 #################################
+-Configuracion replica server-world.com
+
+#################### nfs1 c1114 #################################
+-Instalo paquetes nfs4: sudo yum install nfs-utils nfs4-acl-tools portmap
+-Instalo cliente ipa: ipa-client-install --force-ntpd
+-Añado el principal del servicio nfs de nfs1: ipa service-add nfs/nfs1.1.1.ff.es.eu.org
+-Añado el principal del host nfs1: ipa service-add host/nfs1.1.1.ff.es.eu.org
+-Añado el principal del host cliente1
+-Añado el principal del servicio nfs de cliente1
+-Añado el principal del host cliente2
+-Añado el principal del servicio nfs de cliente2
+
+kinit: genera ticket de principal
+klist -l: lista tipo cache del principal
+klist -A: muestra contenido cache(claves de sesion)
+kdestroy -A: destruye todo(claves y ticket)
+
+sudo kadmin.local -q "list_principals": lista de principals
+ kadmin -p pepe: gestionar cuenta de pepe
+
+sudo ktutil .. read_kt /etc/krb5.keytab : leer keytab
+sudo ktutil .. l : listar keytab
+
+-Cambio el dafaultcache de /etc/krb5.conf por:
+        default_ccache_name = FILE:/tmp/krb5cc_%{uid}
+
+
+-Obtengo keytab para host nfs1:
+	su root
+	kinit admin
+	ipa-getkeytab -s ipa1.1.1.ff.es.eu.org -p host/nfs1.1.1.ff.es.eu.org -k /etc/krb5.keytab
+	El ticket pertenece a root (su root) y por lo tanto coincide con el UID al ejecutar el comando ipa-getkeytab, notese el fichero /tmp/krb5cc_0 siendo 0 el UID de root.
+
+-Obtengo keytab par servicion nfs:
+	su root
+	kinit admin
+	 sudo ipa-getkeytab -s ipa1.1.1.ff.es.eu.org -p nfs/nfs1.1.1.ff.es.eu.org -k /etc/krb5.keytab
+
+
+-Compruebo las claves generadas
+	sudo ktutil
+	ktutil: read_kt /etc/krb5.keytab
+	ktutil: l
+
+-Creo el directorio a exportar: /srv/nfs4/home
+-Copio los ficheros iniciales al directorio pepe: cp -r /etc/skel/. /srv/nfs4/home/pepe
+-Creo fichero de demo: touch cuenta_pepe.txt
+-Cambio el UID y GUID al de pepe: chown 122000001:122000001 * (directorio incluido)
+-Permisos carpeta HOME -> 755
+-Exporto directorio(sera un pseudodirectorio cuya raiz es /srv/nfs4/home
+ /etc/exports:
+	/srv/nfs4/home	2001:470:736b:112::0/64(rw,sync,fsid=0,sec=krb5,no_subtree_check)
+-Actualizo: exportfs -a
+-Compruebo exportacion: exportfs -v
+
+-Descomento en /etc/idmap.conf
+	Nobody-User = nobody
+	Nobody-Group = nobody
+
+
+
+#################### cliente1 c1122 #################################
+-Instalo paquete cliente ipa: sudo yum install ipa-client
+-Arreglo certmonger:
+        sudo systemctl start certmonger
+        sudo systemctl restart dbus
+        sudo systemctl restart certmonger
+        sudo systemctl status certmonger
+-Instalo cliente ipa: sudo ipa-client-install --force-ntpd
+
+-Cambio el dafaultcache de /etc/krb5.conf por:
+	default_ccache_name = FILE:/tmp/krb5cc_%{uid}
+-Genero el keytab del host cliente1:
+sudo ipa-getkeytab -s ipa1.1.1.ff.es.eu.org -p host/cliente1.1.1.ff.es.eu.org -k /etc/krb5.keytab
+
+-Genero el keytab de nfs de cliente1:
+sudo ipa-getkeytab -s ipa1.1.1.ff.es.eu.org -p nfs/cliente1.1.1.ff.es.eu.org -k /etc/krb5.keytab
+
+-Compruebo las claves generadas
+        sudo ktutil
+        ktutil: read_kt /etc/krb5.keytab
+        ktutil: l
+
+
+UNA VEZ SERVIDOR NFS HA EXPORTADO PSEUDODIRECTORIO /srv/nfs4/home
+-Compruebo la exportacion: showmount -e nfs1.1.1.ff.es.eu.org
+-Monto manualmente: sudo mount -v -t nfs4 -o sec=krb5 nfs1.1.1.ff.es.eu.org:/ /home
+-Desmonto manualmente: sudo umount /home
+
+-ES NECESARIO QUE EL USUARIO SEA PRINCIPAL DE FREEIPA PARA ACCEDER AL MOUNT POINT
+
+----------------AUTOMOUNT-------------------------
+1. Añado a /etc/auto.master:
+	/home	/etc/auto.home
+
+2. Creo y añado a /etc/auto.home:
+	*	-rw,fstype=nfs4,sec=krb5 	nfs1.1.1.ff.es.eu.org:/
+
+3.Activo en el inicio el servicio autofs:
+	sudo systemctl enable autofs
+	sudo systemctl start autofs
+
+
+
+#################### cliente2 c1122 #################################
+-Instalo paquete cliente ipa: sudo yum install ipa-client
+-Arreglo certmonger:
+	sudo systemctl start certmonger
+	sudo systemctl restart dbus
+	sudo systemctl restart certmonger
+	sudo systemctl status certmonger
+-Instalo cliente ipa: sudo ipa-client-install --force-ntpd
+
+-Cambio el dafaultcache de /etc/krb5.conf por:
+        default_ccache_name = FILE:/tmp/krb5cc_%{uid}
+
+-Genero el keytab de cliente1:
+sudo ipa-getkeytab -s ipa1.1.1.ff.es.eu.org -p host/cliente2.1.1.ff.es.eu.org -k /etc/krb5.keytab
+
+-Genero el keytab de nfs de cliente2:
+sudo ipa-getkeytab -s ipa1.1.1.ff.es.eu.org -p nfs/cliente2.1.1.ff.es.eu.org -k /etc/krb5.keytab
+
+
+-Compruebo las claves generadas
+        sudo ktutil
+        ktutil: read_kt /etc/krb5.keytab
+        ktutil: l
+
+

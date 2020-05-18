@@ -1,0 +1,17 @@
+chrony
+https://www.thegeekdiary.com/centos-rhel-7-configuring-ntp-using-chrony/
+freeIPA+nfs
+http://linux-nfs.org/wiki/index.php/NFS_and_FreeIPA
+nfs4
+https://www.cyberciti.biz/faq/centos-fedora-rhel-nfs-v4-configuration/
+https://astillas.net/wiki/Nfs4
+
+
+
+
+INFO KERBEROS
+Los servicios remotos permiten el acceso si puede proporcionar un ticket que demuestre su identidad y una clave de sesión coincidente. La clave de sesión contiene información que es específica del usuario y del servicio al que se accede. El KDC crea un ticket y una clave de sesión para todos los usuarios cuando inician sesión por primera vez. El ticket y la clave de sesión coincidente constituyen una credencial. Mientras utilice varios servicios de red, el usuario puede recopilar muchas credenciales. El usuario debe tener una credencial para cada servicio que se ejecute en un servidor determinado. Por ejemplo, para acceder al servicio nfs en un servidor que se llama boston se requiere una credencial. Para acceder al servicio nfs en otro servidor se necesita la credencial independiente.
+
+Para acceder a un servicio específico en un servidor específico, el usuario debe obtener dos credenciales. La primera credencial es para el ticket de otorgamiento de tickets (TGT). Una vez que el servicio de otorgamiento de tickets descifra esta credencial, el servicio crea una segunda credencial para el servidor al que el usuario solicita acceso. Esta segunda credencial se puede utilizar para solicitar acceso al servicio en el servidor. Después de que el servidor descifra correctamente la segunda credencial, se le otorga el acceso al usuario.
+
+El proceso de creación y almacenamiento de las credenciales es transparente. Las credenciales las crea el KDC que las envía al solicitante. Cuando se recibe, la credencial se almacena en una caché de credenciales.
