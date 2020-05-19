@@ -4,7 +4,8 @@
 PROBLEMAS
 	certmonger
 	Al añadir el keytab del host nfs ejecutaba el comando ipa-getkeytab como sudo pero el ticket (kinit admin) lo ejecutaba como usuario normal y por lo tanto no coincidían las credenciales de la caché de claves.
-
+	Al automontar en los clientes, se configuraba como ... , haciendo que al acceder a /hom/algo
+	se montase el home remoto sobre /home/algo de forma errónea. 
 #################basico Maquina orouter11 ##################################
 openBSD
 -Servicio resolucion DNS recursivo (unobund): 
@@ -147,6 +148,7 @@ ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 3.0.0.0.0.0.0.0.0.0.0.
 
 -Añado un usuario. Su contraseña habrá que cambiarla al iniciar sesion
 ipa user-add pepe --first=Pepe --last=Garcia --password
+ipa user-add a755232 --password
 
 -Instalo el cliente ipa en cliente1 y me logeo en la cuenta pepe:
 	sudo yum install ipa-client
@@ -160,11 +162,14 @@ ipa user-add pepe --first=Pepe --last=Garcia --password
 -Instalo paquetes nfs4: sudo yum install nfs-utils nfs4-acl-tools portmap
 -Instalo cliente ipa: ipa-client-install --force-ntpd
 -Añado el principal del servicio nfs de nfs1: ipa service-add nfs/nfs1.1.1.ff.es.eu.org
--Añado el principal del host nfs1: ipa service-add host/nfs1.1.1.ff.es.eu.org
+-Añado el principal del host nfs1: ipa host-add nfs1.1.1.ff.es.eu.org
 -Añado el principal del host cliente1
 -Añado el principal del servicio nfs de cliente1
 -Añado el principal del host cliente2
 -Añado el principal del servicio nfs de cliente2
+
+-Añado el principal del host zabbix1:ipa host-add zabbix1.1.1.ff.es.eu.org
+-Añado el principal de servicio httpd: ipa service-add http/zabbix1.1.1.ff.es.eu.org
 
 kinit: genera ticket de principal
 klist -l: lista tipo cache del principal
@@ -201,7 +206,7 @@ sudo ktutil .. l : listar keytab
 -Creo el directorio a exportar: /srv/nfs4/home
 -Copio los ficheros iniciales al directorio pepe: cp -r /etc/skel/. /srv/nfs4/home/pepe
 -Creo fichero de demo: touch cuenta_pepe.txt
--Cambio el UID y GUID al de pepe: chown 122000001:122000001 * (directorio incluido)
+-Cambio el UID y GUID al de pepe: chown -R 122000001:122000001 <directorioUsuario>
 -Permisos carpeta HOME -> 755
 -Exporto directorio(sera un pseudodirectorio cuya raiz es /srv/nfs4/home
  /etc/exports:
@@ -250,11 +255,13 @@ UNA VEZ SERVIDOR NFS HA EXPORTADO PSEUDODIRECTORIO /srv/nfs4/home
 	/home	/etc/auto.home
 
 2. Creo y añado a /etc/auto.home:
-	*	-rw,fstype=nfs4,sec=krb5 	nfs1.1.1.ff.es.eu.org:/
+	*	-rw,fstype=nfs4,sec=krb5 	nfs1.1.1.ff.es.eu.org:/&
 
 3.Activo en el inicio el servicio autofs:
 	sudo systemctl enable autofs
 	sudo systemctl start autofs
+Notar que en /etc/auto.home estoy indicando que cuando se haga cd en /home/pepe se va montar
+el directorio remoto "pepe" en /home. El asterisco captura pepe y el ampersan so asocia al fichero remoto a montar
 
 
 
@@ -282,4 +289,37 @@ sudo ipa-getkeytab -s ipa1.1.1.ff.es.eu.org -p nfs/cliente2.1.1.ff.es.eu.org -k 
         ktutil: read_kt /etc/krb5.keytab
         ktutil: l
 
+-NFS y AUTOMOUNT igual que el cliente1
 
+
+
+
+#################### zabbix1 (c1115) #################################
+-Instalo servidor http (server-world.net)
+-Instalo cliente ipa
+-Cambio el dafaultcache de /etc/krb5.conf por:
+        default_ccache_name = FILE:/tmp/krb5cc_%{uid}
+-Añado keytab para host y servicio http:
+	sudo ipa-getkeytab -s ipa1.1.1.ff.es.eu.org -p host/zabbix1.1.1.ff.es.eu.org -k /etc/krb5.keytab 
+	sudo ipa-getkeytab -s ipa1.1.1.ff.es.eu.org -p http/zabbix1.1.1.ff.es.eu.org -k /etc/httpd/conf/ipa.keytab
+
+-Instalo php: sudo yum install php (v5.4)
+-Instalo mariaDb:
+	curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | sudo bash
+	sudo yum install MariaDB-server MariaDB-client
+-Habilito mariadb
+	 sudo systemctl start mariadb
+	 sudo systemctl enable mariadb
+-Instalo zabbix con tutorial web
+me logeo con sudo mysql -u root -p
+creo usuario zabbix
+	grant all privileges on zabbix.* to zabbix@localhost identified by 'zabbixope1';
+
+Eliminar tablas de una database:
+	drop database zabbix;
+	create database zabbix;
+	use zabbix; //cambiar a la base zabbix
+	show tables; //mostrar las tablas de zabbix (ninguna)
+
+En el frontend zabbix el usuario es admin y la password zabbix
+	

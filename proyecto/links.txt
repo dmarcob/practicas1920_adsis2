@@ -5,7 +5,9 @@ http://linux-nfs.org/wiki/index.php/NFS_and_FreeIPA
 nfs4
 https://www.cyberciti.biz/faq/centos-fedora-rhel-nfs-v4-configuration/
 https://astillas.net/wiki/Nfs4
-
+zabbix
+https://www.server-world.info/en/note?os=CentOS_7&p=zabbix42&f=1
+https://www.digitalocean.com/community/tutorials/how-to-install-and-configure-zabbix-to-securely-monitor-remote-servers-on-centos-7
 
 
 
