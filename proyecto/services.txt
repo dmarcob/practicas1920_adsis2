@@ -6,6 +6,9 @@ PROBLEMAS
 	Al añadir el keytab del host nfs ejecutaba el comando ipa-getkeytab como sudo pero el ticket (kinit admin) lo ejecutaba como usuario normal y por lo tanto no coincidían las credenciales de la caché de claves.
 	Al automontar en los clientes, se configuraba como ... , haciendo que al acceder a /hom/algo
 	se montase el home remoto sobre /home/algo de forma errónea. 
+
+
+	fichero .conf base de datos kerberos MALA
 #################basico Maquina orouter11 ##################################
 openBSD
 -Servicio resolucion DNS recursivo (unobund): 
@@ -118,23 +121,22 @@ ipa1.1.1.ff.es.eu.org
 -ipa-server-install --setup-dns
 -Comprobar que SElinux esta desactivado
 	vi /etc/selinux/config
-
 -Añadir registros dns
 	ipa dnsrecord-find #Mostrar entradas de zona
 	#ZONA DIRECTA
 	ipa dnsrecord-add 1.1.ff.es.eu.org ipa2 --aaaa-ip-address=2001:470:736b:111::3
 	ipa dnsrecord-add 1.1.ff.es.eu.org nfs1 --aaaa-ip-address=2001:470:736b:111::4
 	ipa dnsrecord-add 1.1.ff.es.eu.org zabbix1 --aaaa-ip-address=2001:470:736b:111::5
-	ipa dnsrecord-add 1.1.ff.es.eu.org cliente1 --aaaa-ip-address=2001:470:736b:112::2
-	ipa dnsrecord-add 1.1.ff.es.eu.org cliente2 --aaaa-ip-address=2001:470:736b:112::3
+	ipa dnsrecord-add 1.1.ff.es.eu.org cliente1 --aaaa-ip-address=2001:470:736b:112:5054:ff:fe01:1202
+	ipa dnsrecord-add 1.1.ff.es.eu.org cliente2 --aaaa-ip-address=2001:470:736b:112:5054:ff:fe01:1203
 
 	#ZONA INVERSA
 	ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 --ptr-rec=ipa1.1.1.ff.es.eu.org.
 ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 3.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 --ptr-rec=ipa2.1.1.ff.es.eu.org.
 ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 4.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 --ptr-rec=nfs1.1.1.ff.es.eu.org.
 ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 5.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 --ptr-rec=zabbix1.1.1.ff.es.eu.org.
-ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.2 --ptr-rec=cliente1.1.1.ff.es.eu.org.
-ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 3.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.2 --ptr-rec=cliente2.1.1.ff.es.eu.org.
+ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 2.0.2.1.1.0.e.f.f.f.0.0.4.5.0.5.2 --ptr-rec=cliente1.1.1.ff.es.eu.org.
+ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 3.0.2.1.1.0.e.f.f.f.0.0.4.5.0.5.2 --ptr-rec=cliente2.1.1.ff.es.eu.org.
 
 -VERIFICACION:
 	dig zabbix1.1.1.ff.es.eu.org AAAA @8.8.8.8 +short
@@ -149,6 +151,8 @@ ipa dnsrecord-add 1.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 3.0.0.0.0.0.0.0.0.0.0.
 -Añado un usuario. Su contraseña habrá que cambiarla al iniciar sesion
 ipa user-add pepe --first=Pepe --last=Garcia --password
 ipa user-add a755232 --password
+
+-Cambiar contraseña usuario: ipa user-mod alicia --password
 
 -Instalo el cliente ipa en cliente1 y me logeo en la cuenta pepe:
 	sudo yum install ipa-client
