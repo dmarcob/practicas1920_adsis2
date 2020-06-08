@@ -1,0 +1,3 @@
+class{'red':
+	tipovariante=>b,	
+}

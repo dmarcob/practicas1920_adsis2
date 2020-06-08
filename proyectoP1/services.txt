@@ -1,3 +1,31 @@
+PROBLEMAS TRAS LA DEFENSA:
+----------------------------------------------------------------
+1. No funcionaba passwd para los usuarios:
+SOLUCION: Sí funcionaba, solo que para cambiar tu propia contraseña solo ha que poner passwd
+a secas. Si pones passwd <user> se interpreta como que se quiere cambiar la contraseña de otro usuario y no deja.
+------------------------------------------------------------------
+2.La réplica freeIPA no actua como servidor freeIPA si se cae el maestro.
+
+
+freeIPA   [1/3]: configuring TLS for DS instance fails
+ Certificate issuance failed (CA_UNREACHABLE: Server at https://ipa1.1.1.ff.es.eu.org/ipa/xml failed request, will retry: 4016 (RPC failed at server.  Failed to authenticate to CA REST API).)
+
+https://computingforgeeks.com/configure-freeipa-replication-on-ubuntu-centos/
+
+SOLUCION: En ipa1, en fichero /etc/pki/pki-tomcat/server.xml, en linea 219 cambiar parametro address por ::1. 
+Resulta que el servidor de certificados escuchaba en localhost 127.0.0.1 y la red solo trabaja en ipv6.
+----------------------------------------------------------------------
+3. FALTA DE MEMORIA EN IPA2
+        [1/1]: installing X509 Certificate for PKINIT
+        Terminado (killed)
+
+SOLUCIÓN: Dar un gigabyte más de memoria en el xml de la máquina virtual. c1113.xml
+-----------------------------------------------------------------------------------
+
+
+
+
+
 #Inicialmente se van configurar los servidores nsd1 nsd2 y ntp1 para las máquinas
 #ipa1 e ipa2, posteriormente funcionaran con los servidores ipa1 e ipa2.
 
@@ -160,8 +188,19 @@ ipa user-add a755232 --password
 	authconfig --enablemkhomedir --update
 
 #################### ipa2 c1113 #################################
--Configuracion replica server-world.com
+-Instalo cliente ipa. Cuidado con certmonger
+-Añado ipa2 al grupo de servidores ipa para que tenga privilegios:
+	kinit admin
+	ipa hostgroup-add-member ipaservers --hosts ipa2.1.1.ff.es.eu.org
+-Instalo ipa-replica-install. Cuidado con server.xml, mirar la solucion.
+	sudo kinit admin
+	sudo yum install ipa-server-dns
+	# AUMENTAR MEMORIA 1 GIGA MÁS
+	# MODIFICAR hostname por ::1 en ipa1
+	sudo ipa-replica-install --setup-dns --forwarder 2001:470:736b:1ff::2
+	sudo ipa-ca-install
 
+Puede ser por falta de memoria. Probar en otra máquina (memoria swap poca)
 #################### nfs1 c1114 #################################
 -Instalo paquetes nfs4: sudo yum install nfs-utils nfs4-acl-tools portmap
 -Instalo cliente ipa: ipa-client-install --force-ntpd
