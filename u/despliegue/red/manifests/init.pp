@@ -21,9 +21,13 @@ class red(
 		    nombre_dns => $nombre_dns_nodo,
 		}
 	   }
-	}
-	file{'/home/a755232/gato':
-		ensure=>file,
-		content=>"Esto es un ejemplo",
+	   
+	   'cliente_centos': {
+		class{'red::cliente_centos':
+		    dns1=> $dns1_nodo,
+		    dns2=> $dns2_nodo,
+		    nombre_dns => $nombre_dns_nodo,
+		}
+	   }
 	}
 }

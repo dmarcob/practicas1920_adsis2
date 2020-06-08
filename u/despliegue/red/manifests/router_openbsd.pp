@@ -91,11 +91,6 @@ rad_flags=\"\"
         	subscribe => File["/etc/rad.conf"],
 	}
 
-	exec { "restart-network":
-            	command     => "/sbin/route delete default ; /bin/sh /etc/netstart &",
-            	path        => "/bin:/usr/bin:/sbin:/usr/sbin",
-      	}
-
 	exec { "update-forwarding":
                 command     => "sysctl net.inet6.ip6.forwarding=1",
                 path        => "/bin:/usr/bin:/sbin:/usr/sbin",
