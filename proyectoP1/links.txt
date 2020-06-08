@@ -10,9 +10,6 @@ https://www.server-world.info/en/note?os=CentOS_7&p=zabbix42&f=1
 https://www.digitalocean.com/community/tutorials/how-to-install-and-configure-zabbix-to-securely-monitor-remote-servers-on-centos-7
 
 
-problema passwd con kerberos/ldap
-https://www.it-swarm.dev/es/authentication/el-cambio-de-contrasena-sssd-no-funciona-con-el-backend-ldap/961193966/
-
 
 INFO KERBEROS
 Los servicios remotos permiten el acceso si puede proporcionar un ticket que demuestre su identidad y una clave de sesión coincidente. La clave de sesión contiene información que es específica del usuario y del servicio al que se accede. El KDC crea un ticket y una clave de sesión para todos los usuarios cuando inician sesión por primera vez. El ticket y la clave de sesión coincidente constituyen una credencial. Mientras utilice varios servicios de red, el usuario puede recopilar muchas credenciales. El usuario debe tener una credencial para cada servicio que se ejecute en un servidor determinado. Por ejemplo, para acceder al servicio nfs en un servidor que se llama boston se requiere una credencial. Para acceder al servicio nfs en otro servidor se necesita la credencial independiente.
