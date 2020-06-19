@@ -1,10 +1,8 @@
 #!/bin/bash
 ##########################################################################
 # Autor: Diego Marco Beisty, 755232
-# Fichero: despliegue.sh
+# Fichero: despliegue_red.sh
 # Fecha:
-# Coms: Script principal para despligue de sistema automatizado con puppet.
-# 	Proyecto1, parte2. Administración de sistemas 2.
 ##########################################################################
 
 
@@ -15,6 +13,12 @@
 # RED #
 #######
 
+#Testeo la conectividad con las máquinas
+./u.rb maquinas_red_estado_inicial p
+if [ $? -eq 1 ];then
+	echo "Abortando despliegue..."
+	exit 1
+fi
 #Instalo módulo puppet de red en todas las máquinas
 ./u.rb maquinas_red_estado_inicial m red.tar.gz
 echo -e "-----Módulo RED instalado\n\n"

@@ -181,7 +181,6 @@ ipa user-add pepe --first=Pepe --last=Garcia --password
 ipa user-add a755232 --password
 
 -Cambiar contraseña usuario: ipa user-mod alicia --password
-
 -Instalo el cliente ipa en cliente1 y me logeo en la cuenta pepe:
 	sudo yum install ipa-client
 	ipa-client-install --force-ntpd
@@ -196,7 +195,7 @@ ipa user-add a755232 --password
 	sudo kinit admin
 	sudo yum install ipa-server-dns
 	# AUMENTAR MEMORIA 1 GIGA MÁS
-	# MODIFICAR hostname por ::1 en ipa1
+	# MODIFICA hostname por ::1 en ipa1
 	sudo ipa-replica-install --setup-dns --forwarder 2001:470:736b:1ff::2
 	sudo ipa-ca-install
 

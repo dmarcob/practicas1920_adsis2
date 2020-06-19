@@ -75,7 +75,7 @@ net.ipv6.conf.eth0.accept_ra=0
                 content =>"127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
 ::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
 
-2001:470:736b:121::2  ${nombre_dns}
+${ip}  ${nombre_dns}
 ",
         }
 	

@@ -90,7 +90,13 @@ rad_flags=\"\"
         	ensure=>running,
         	subscribe => File["/etc/rad.conf"],
 	}
-
+	
+	file{'/etc/sysctl.conf':
+		ensure=>file,
+		mode=>'0644',
+		content=>"net.inet6.ip6.forwarding=1
+",
+	}
 	exec { "update-forwarding":
                 command     => "sysctl net.inet6.ip6.forwarding=1",
                 path        => "/bin:/usr/bin:/sbin:/usr/sbin",

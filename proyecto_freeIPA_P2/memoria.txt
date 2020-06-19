@@ -1,0 +1,172 @@
+#################################
+1. A mano
+#################################
+- Creación de máquinas  orouter12 (2001:470:736b:120::2)
+			c1212 (ipa1, 2001:470:736b:121::2)
+			c1213 (ipa2, 2001:470:736b:121::3)
+			c1214 (nfs1, 2001:470:736b:121::4)
+			c1215 (zabbix1, 2001:470:736b:121::5)
+			c1222 (cliente1, ¿?¿?¿?¿?¿??¿?¿?¿?)
+			c1223 (cliente2, ¿?¿?¿?¿?¿?¿?¿?¿?¿)
+
+-orouter1 - Subred 2001:470:736b:120::/60
+ 	/etc/hostname.vlan120
+		inet6 alias 2001:470:736b:120::1 64 vlan 120 vlandev vio0
+		!route add -inet6 2001:470:736b:120::/60 2001:470:736b:120::2
+		-autoconfprivacy
+ 	sh /etc/netstart
+
+-o1ff3 - glue records
+	zona directa
+		2       IN      NS      ipa1.2.1.ff.es.eu.org.
+		2       IN      NS      ipa2.2.1.ff.es.eu.org.
+		ipa1.2  IN      AAAA    2001:470:736b:121::2
+		ipa2.2  IN      AAAA    2001:470:736b:121::3
+	zona inversa
+		2       IN      NS      ipa1.2.1.ff.es.eu.org.
+		2       IN      NS      ipa2.2.1.ff.es.eu.org.
+
+	nsd-checkzone
+	nsd-control reload
+
+-orouter12 - Conexión básica al exterior
+ 	/etc/hostnema.vio0
+		inet6 autoconf
+		-autoconfprivacy
+
+-Demas maquinas - Conexion básica al exterior
+	sudo yum remove NetworkManager
+-Además las conecto a unbound de o1ff2 para que puedan descargar puppet
+-BACKUP	
+
+
+
+#################################
+2.freeIPA
+#################################
+-----------
+-- ipa1  --
+-----------
+sudo yum -y install freeipa-server ipa-server-dns
+sudo systemctl restart dbus
+sudo systemctl restart certmonger
+sudo ipa-server-install --setup-dns
+- ZONA DIRECTA
+ipa dnsrecord-add 2.1.ff.es.eu.org ipa2 --aaaa-ip-address=2001:470:736b:121::3
+ipa dnsrecord-add 2.1.ff.es.eu.org nfs1 --aaaa-ip-address=2001:470:736b:121::4
+ipa dnsrecord-add 2.1.ff.es.eu.org zabbix1 --aaaa-ip-address=2001:470:736b:121::5
+ipa dnsrecord-add 2.1.ff.es.eu.org cliente1 --aaaa-ip-address=2001:470:736b:122:5054:ff:fe01:2202
+ipa dnsrecord-add 2.1.ff.es.eu.org cliente2 --aaaa-ip-address=2001:470:736b:122:5054:ff:fe01:2203
+
+-ZONA INVERSA
+ipa dnszone-add 2.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa.
+ ipa dnsrecord-add 2.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 2.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 --ptr-rec=ipa1.2.1.ff.es.eu.org.
+ ipa dnsrecord-add 2.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 3.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 --ptr-rec=ipa2.2.1.ff.es.eu.org.
+ ipa dnsrecord-add 2.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 4.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 --ptr-rec=nfs1.2.1.ff.es.eu.org.
+ ipa dnsrecord-add 2.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 5.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.1 --ptr-rec=zabbix1.2.1.ff.es.eu.org.
+ipa dnsrecord-add 2.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 2.0.2.2.1.0.e.f.f.f.0.0.4.5.0.5.2 --ptr-rec=cliente1.2.1.ff.es.eu.org.
+ipa dnsrecord-add 2.1.0.b.6.3.7.0.7.4.0.1.0.0.2.ip6.arpa. 3.0.2.2.1.0.e.f.f.f.0.0.4.5.0.5.2 --ptr-rec=cliente2.2.1.ff.es.eu.org.
+
+
+--TESTEO
+dig ipa1.2.1.ff.es.eu.org AAAA @8.8.8.8
+dig ipa2.2.1.ff.es.eu.org AAAA @8.8.8.8
+dig nfs1.2.1.ff.es.eu.org AAAA @8.8.8.8
+dig zabbix1.2.1.ff.es.eu.org AAAA @8.8.8.8
+dig cliente1.2.1.ff.es.eu.org AAAA @8.8.8.8
+dig cliente2.2.1.ff.es.eu.org AAAA @8.8.8.8
+
+dig -x 2001:470:736b:121::2 @8.8.8.8 +short
+dig -x 2001:470:736b:121::3 @8.8.8.8 +short
+dig -x 2001:470:736b:121::4 @8.8.8.8 +short
+dig -x 2001:470:736b:121::5 @8.8.8.8 +short
+dig -x 2001:470:736b:122:5054:ff:fe01:2202 @8.8.8.8 +short
+dig -x 2001:470:736b:122:5054:ff:fe01:2203 @8.8.8.8 +short
+
+- Añado principals
+ipa service-add nfs/nfs1.2.1.ff.es.eu.org
+ipa service-add nfs/cliente1.2.1.ff.es.eu.org
+ipa service-add nfs/cliente2.2.1.ff.es.eu.org
+
+- Añado replica
+ipa hostgroup-add-member ipaservers --hosts ipa2.2.1.ff.es.eu.org
+Cambiar address ::1
+-----------
+-- ipa2 --
+----------
+sudo yum install ipa-client
+sudo systemctl restart dbus
+sudo systemctl restart certmonger
+sudo ipa-client-install --force-ntpd
+-keytab
+Cambio el dafaultcache de /etc/krb5.conf por:
+        default_ccache_name = FILE:/tmp/krb5cc_%{uid}
+su root
+kinit admin
+ipa-getkeytab -s ipa1.2.1.ff.es.eu.org -p host/ipa2.2.1.ff.es.eu.org -k /etc/krb5.keytab
+-replica
+
+
+-----------
+-- nfs1 --
+----------
+sudo yum install ipa-client
+sudo systemctl restart dbus
+sudo systemctl restart certmonger
+sudo ipa-client-install --force-ntpd
+-keytab
+Cambio el dafaultcache de /etc/krb5.conf por:
+        default_ccache_name = FILE:/tmp/krb5cc_%{uid}
+su root
+kinit admin
+ipa-getkeytab -s ipa1.2.1.ff.es.eu.org -p host/nfs1.2.1.ff.es.eu.org -k /etc/krb5.keytab
+ipa-getkeytab -s ipa1.2.1.ff.es.eu.org -p nfs/nfs1.2.1.ff.es.eu.org -k /etc/krb5.keytab
+
+-----------
+-- zabbix1 --
+----------
+sudo yum install ipa-client
+sudo systemctl restart dbus
+sudo systemctl restart certmonger
+sudo ipa-client-install --force-ntpd
+-keytab
+Cambio el dafaultcache de /etc/krb5.conf por:
+        default_ccache_name = FILE:/tmp/krb5cc_%{uid}
+su root
+kinit admin
+ipa-getkeytab -s ipa1.2.1.ff.es.eu.org -p host/zabbix1.2.1.ff.es.eu.org -k /etc/krb5.keytab
+
+-----------
+-- cliente1 --
+----------
+sudo yum install ipa-client
+sudo systemctl restart dbus
+sudo systemctl restart certmonger
+sudo ipa-client-install --force-ntpd
+
+sudo authconfig --enablemkhomedir --update
+
+-keytab
+Cambio el dafaultcache de /etc/krb5.conf por:
+        default_ccache_name = FILE:/tmp/krb5cc_%{uid}
+su root
+kinit admin
+ipa-getkeytab -s ipa1.2.1.ff.es.eu.org -p host/cliente1.2.1.ff.es.eu.org -k /etc/krb5.keytab
+ipa-getkeytab -s ipa1.2.1.ff.es.eu.org -p nfs/cliente1.2.1.ff.es.eu.org -k /etc/krb5.keytab
+
+-----------
+-- cliente2 --
+----------
+sudo yum install ipa-client
+sudo systemctl restart dbus
+sudo systemctl restart certmonger
+sudo ipa-client-install --force-ntpd
+
+sudo authconfig --enablemkhomedir --update
+-keytab
+Cambio el dafaultcache de /etc/krb5.conf por:
+        default_ccache_name = FILE:/tmp/krb5cc_%{uid}
+su root
+kinit admin
+ipa-getkeytab -s ipa1.2.1.ff.es.eu.org -p host/cliente2.2.1.ff.es.eu.org -k /etc/krb5.keytab
+ipa-getkeytab -s ipa1.2.1.ff.es.eu.org -p nfs/cliente2.2.1.ff.es.eu.org -k /etc/krb5.keytab

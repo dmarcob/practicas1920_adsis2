@@ -18,11 +18,12 @@ require 'net/scp'
 def ping_tcp(maquinas)
 	num_host = 1
 	maquinas.each do |host|
-		t = Net::Ping::TCP.new(host, 22, 0.3)
+		t = Net::Ping::TCP.new(host, 22, 30)
 		if t.ping?
 			puts "máquina_" + num_host.to_s + ": FUNCIONA"
 		else
 			puts "máquina_" + num_host.to_s + ": falla"
+			exit 1
 		end
 		num_host = num_host + 1
 	end
@@ -83,7 +84,7 @@ def modulo_puppet(maquinas, d_despliegue, modulo)
 	 if File.file?(f + "/" +  modulo)
             begin
 		maquinas.each do |host|
-		 Net::SSH.start(host, "a755232",:timeout=> 7) do |ssh|
+		 Net::SSH.start(host, "a755232",:timeout=> 30) do |ssh|
                                    ssh.exec!("mkdir /tmp/.puppet")
                                    scp = Net::SCP.start(host, "a755232")
                                    scp.upload! f + "/" + modulo, "/tmp/.puppet"
