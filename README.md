@@ -3,7 +3,7 @@ Prácticas de la asignatura Administración de Sistemas 2, especialidad Tecnolog
 ###  Prácticas: Puesta en marcha de servicios básicos en un sistema real
     Directorio:   practicas/
     Calificación: 8.42  
-![alt text](https://https://github.com/dmarcob/practicas1920_adsis2/blob/master/images/practica3.png "Logo Title Text 1")
+![alt text](https://https://github.com/dmarcob/practicas1920_adsis2/blob/master/images/practica3.png)
 ###  Base de datos de cine  
     Directorio:   practica2/  
     Calificación: 9  
